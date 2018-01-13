@@ -1,0 +1,89 @@
+---
+- name: Create users in the AWS Bastion Account
+  hosts: localhost
+  gather_facts: false
+  pre_tasks:
+    - name: Check if customer_key is available
+      assert:
+        that:
+          - "customer_key is defined"
+  vars_files:
+    - awsaccounts-{{ customer_key }}.yml
+    - awsusers-{{ customer_key }}.yml
+  tasks:
+    - name: Assume role for bastion/admin
+      sts_assume_role:
+        aws_access_key: "{{ organization_account.aws_access_key }}"
+        aws_secret_key: "{{ organization_account.aws_secret_key }}"
+        role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role }}"
+        role_session_name: "bastion-{{ bastion_account.account_id }}-{{ bastion_account.sts_role }}"
+      register: assumed_role
+
+    - name: Dump it
+      debug:
+        var: assumed_role
+        verbosity: 1
+
+    - name: Create users in the bastion account
+      iam:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: user
+        name: "{{ item.name }}"
+        state: present
+        update_password: on_create
+        password: "{{ item.initial_password | default('Change_0n_login') }}"
+      with_items: "{{ aws_users }}"
+
+    - name: Create groups in the bastion account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "{{ item[0].name }}-{{ item[1].account_id }}"
+        state: present
+      with_nested:
+        - "{{ aws_groups }}"
+        - "{{ subaccounts }}"
+
+    - name: Assign policies to groups in the bastion account
+      iam_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: group
+        iam_name: "{{ item[0].name }}-{{ item[1].account_id }}"
+        policy_name: "AssumeRole"
+        policy_json: "{{ lookup('template', 'bastion-group.json.j2') }}"
+        state: present
+      with_nested:
+        - "{{ aws_groups }}"
+        - "{{ subaccounts }}"
+
+
+    - name: Assume role for subaccounts
+      sts_assume_role:
+        aws_access_key: "{{ organization_account.aws_access_key }}"
+        aws_secret_key: "{{ organization_account.aws_secret_key }}"
+        role_arn: "arn:aws:iam::{{ item[0].account_id }}:role/{{ item[0].sts_role }}"
+        role_session_name: "{{ item[0].account_id }}-{{ item[0].sts_role }}"
+      register: "assumed_role_subaccount"
+      with_nested:
+        - "{{ subaccounts }}"
+        - "{{ aws_roles }}"
+      when: "bastion_account.account_id != item[0].account_id"
+
+    - name: Create roles on subaccounts for trusted access from the bastion account
+      iam_role:
+        aws_access_key: "{{ item.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+        security_token: "{{ item.sts_creds.session_token }}"
+        name: "{{ item.item[1].name }}"
+        assume_role_policy_document: "{{ lookup('file', 'policy-trust-for-bastion.json') | regex_replace('__BASTIONACCOUNTID__', bastion_account.account_id) }}"
+        managed_policy: "{{ item.item[1].managed_policies }}"
+        state: present
+      no_log: False
+      with_items: "{{ assumed_role_subaccount.results }}"
+      when: "bastion_account.account_id != item.item[0].account_id"
+
