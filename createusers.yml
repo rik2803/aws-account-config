@@ -2,27 +2,74 @@
 - name: Create users in the AWS Bastion Account
   hosts: localhost
   gather_facts: false
+
   pre_tasks:
-    - name: Check if customer_key is available
+    - name: Test AWS_REGION
+      shell: "[[ -n $AWS_REGION ]]"
+      register: region
+      failed_when: false
+      changed_when: false
+    - name: Test AWS_SECRET_ACCESS_KEY
+      shell: "[[ -n $AWS_SECRET_ACCESS_KEY ]]"
+      register: secret
+      failed_when: false
+      changed_when: false
+    - name: Test AWS_ACCESS_KEY_ID
+      shell: "[[ -n $AWS_ACCESS_KEY_ID ]]"
+      register: key
+      failed_when: false
+      changed_when: false
+    - name: Test if config file exists
+      stat:
+        path: "{{ config_file }}"
+      register: configfile_exists
+      failed_when: false
+      changed_when: false
+    - name: Do assertions on config_filconfig_file and AWS credential envvars
       assert:
         that:
-          - "customer_key is defined"
+          - "config_file is defined"
+          - "key.rc == 0"
+          - "secret.rc == 0"
+          - "region.rc == 0"
+          - "configfile_exists.exists"
+
   vars_files:
-    - awsaccounts-{{ customer_key }}.yml
-    - awsusers-{{ customer_key }}.yml
+    - "{{ config_file }}"
+
+  vars:
+    - org: "{{ organization.name | default('Unknown') }}"
   tasks:
     - name: Assume role for bastion/admin
       sts_assume_role:
-        aws_access_key: "{{ organization_account.aws_access_key }}"
-        aws_secret_key: "{{ organization_account.aws_secret_key }}"
         role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role }}"
-        role_session_name: "bastion-{{ bastion_account.account_id }}-{{ bastion_account.sts_role }}"
+        role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role }}"
       register: assumed_role
+      tags: ['passwordpolicy' ]
 
     - name: Dump it
       debug:
         var: assumed_role
         verbosity: 1
+
+    - name: Create groups in the bastion account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "{{ item[0].name }}-{{ item[1].name }}"
+        state: present
+      with_nested:
+        - "{{ aws_groups }}"
+        - "{{ subaccounts }}"
+
+    - name: Create group ManageYourOwnUser in the bastion account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "ManageYourOwnUser"
+        state: present
 
     - name: Create users in the bastion account
       iam:
@@ -31,21 +78,24 @@
         security_token: "{{ assumed_role.sts_creds.session_token }}"
         iam_type: user
         name: "{{ item.name }}"
-        state: present
+        state: "{{ item.state | default('present') }}"
+        groups:
+          - ManageYourOwnUser
         update_password: on_create
         password: "{{ item.initial_password | default('Change_0n_login') }}"
       with_items: "{{ aws_users }}"
+      when: aws_users is defined
 
-    - name: Create groups in the bastion account
-      iam_group:
+    - name: Create policy ManageYourOwnUser in the bastion account and assign it to the group with the same name
+      iam_policy:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
         security_token: "{{ assumed_role.sts_creds.session_token }}"
-        name: "{{ item[0].name }}-{{ item[1].account_id }}"
+        iam_type: group
+        iam_name: "ManageYourOwnUser"
+        policy_name: "ManageYourOwnUser"
+        policy_json: "{{ lookup('file', 'ManageYourOwnUser.json') }}"
         state: present
-      with_nested:
-        - "{{ aws_groups }}"
-        - "{{ subaccounts }}"
 
     - name: Assign policies to groups in the bastion account
       iam_policy:
@@ -53,7 +103,7 @@
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
         security_token: "{{ assumed_role.sts_creds.session_token }}"
         iam_type: group
-        iam_name: "{{ item[0].name }}-{{ item[1].account_id }}"
+        iam_name: "{{ item[0].name }}-{{ item[1].name }}"
         policy_name: "AssumeRole"
         policy_json: "{{ lookup('template', 'bastion-group.json.j2') }}"
         state: present
@@ -61,13 +111,59 @@
         - "{{ aws_groups }}"
         - "{{ subaccounts }}"
 
+    - name: Set password policy rules on the bastion account
+      command: >
+        aws iam update-account-password-policy
+            --minimum-password-length "{{ bastion_account.minimum_password_length | default('8') }}"
+            --require-numbers
+            --require-uppercase-characters
+            --require-lowercase-characters
+            --allow-users-to-change-password
+            --max-password-age 90
+            --password-reuse-prevention 3
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ assumed_role.sts_creds.access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ assumed_role.sts_creds.secret_key }}"
+        AWS_SESSION_TOKEN: "{{ assumed_role.sts_creds.session_token }}"
+        AWS_DEFAULT_REGION: "{{ assumed_role.region | default('eu-central-1') }}"
+      tags: ['passwordpolicy' ]
 
+
+    ### Assumes for setting the password policy on the subaccounts
     - name: Assume role for subaccounts
       sts_assume_role:
-        aws_access_key: "{{ organization_account.aws_access_key }}"
-        aws_secret_key: "{{ organization_account.aws_secret_key }}"
+        role_arn: "arn:aws:iam::{{ item.account_id }}:role/{{ item.sts_role }}"
+        role_session_name: "{{ item.name }}-{{ item.sts_role }}"
+      register: "assumed_role_subaccount_single"
+      with_items:
+        - "{{ subaccounts }}"
+      when: "bastion_account.account_id != item.account_id"
+      tags: ['passwordpolicy' ]
+
+    - name: Set password policy rules on the sub accounts
+      command: >
+        aws iam update-account-password-policy
+            --minimum-password-length "{{ item.minimum_password_length | default('8') }}"
+            --require-numbers
+            --require-uppercase-characters
+            --require-lowercase-characters
+            --allow-users-to-change-password
+            --max-password-age 90
+            --password-reuse-prevention 3
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
+        AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
+        AWS_DEFAULT_REGION: "{{ item.region | default('eu-central-1') }}"
+      with_items: "{{ assumed_role_subaccount_single.results }}"
+      tags: ['passwordpolicy' ]
+
+    ### This assumes #aws_roles time a role per account, bacause these will be used in the
+    ### a loop to create all roles on all subaccounts.
+    - name: Assume role for subaccounts
+      sts_assume_role:
         role_arn: "arn:aws:iam::{{ item[0].account_id }}:role/{{ item[0].sts_role }}"
-        role_session_name: "{{ item[0].account_id }}-{{ item[0].sts_role }}"
+        role_session_name: "{{ item[0].name }}-{{ item[0].sts_role }}"
       register: "assumed_role_subaccount"
       with_nested:
         - "{{ subaccounts }}"
@@ -83,7 +179,13 @@
         assume_role_policy_document: "{{ lookup('file', 'policy-trust-for-bastion.json') | regex_replace('__BASTIONACCOUNTID__', bastion_account.account_id) }}"
         managed_policy: "{{ item.item[1].managed_policies }}"
         state: present
-      no_log: False
+      no_log: True
       with_items: "{{ assumed_role_subaccount.results }}"
       when: "bastion_account.account_id != item.item[0].account_id"
 
+    ### create html file with cross-account urls
+    - name: create html file
+      template:
+        src: aws-crossaccount-links.j2
+        dest: "/tmp/{{ org }}.html"
+      tags: [ 'html' ]
