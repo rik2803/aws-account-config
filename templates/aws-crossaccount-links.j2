@@ -1,11 +1,11 @@
 <!DOCTYPE HTML>
 <html lang = "en">
 <head>
-  <title>{{ customer_key }} AWS Cross Account Links</title>
+  <title>{{ org }} AWS Cross Account Links</title>
   <meta charset = "UTF-8" />
 </head>
 <body>
-  <h2>Links from bastion account to {{ customer_key }} subaccounts</h2>
+  <h2>Links from bastion account to {{ org }} subaccounts</h2>
 
   For these links to work, you should be logged in to the bastion account <em>and</em> you have to belong to the group
   on the <em>Bastion</em> that allows you to assume the chosen role on the target or trusting account.
@@ -13,15 +13,16 @@
   If not sure, or if you think you require access to a certain role on a certain AWS sub-account, mail to
   aws@ixor.be .
 
-  <ul>
 {% for account in subaccounts %}
+  <h3>Roles for account {{ account.name }}</h3>
+  <ul>
 {%   for role in aws_roles %}
-    <li><a href="https://signin.aws.amazon.com/switchrole?account={{ account.account_id }}&roleName={{ role.name }}&displayName={{ account.name }}_{{ role.name }}">Assume role {{ role.name }} on account {{ account.name }}</a></li>
+    <li><a target="_blank" href="https://signin.aws.amazon.com/switchrole?account={{ account.account_id }}&roleName={{ role.name }}&displayName={{ account.name }}_{{ role.name }}">Assume role {{ role.name }}</a></li>
 {%   endfor %}
-{% endfor %}
   </ul>
+{% endfor %}
 
-  <h2>Links from org account to {{ customer_key }} subaccounts</h2>
+  <h2>Links from org account to {{ org }} subaccounts</h2>
 
   For these links to work, you should be logged in to the organization account <em>and</em> you have to belong to the group
   on the <em>Bastion</em> that allows you to assume the chosen role on the target or trusting account.

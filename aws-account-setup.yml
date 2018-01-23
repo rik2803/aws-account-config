@@ -36,9 +36,9 @@
 
   vars_files:
     - "{{ config_file }}"
-
   vars:
     - org: "{{ organization.name | default('Unknown') }}"
+
   tasks:
     - name: Assume role for bastion/admin
       sts_assume_role:
@@ -59,13 +59,25 @@
         - "{{ subaccounts }}"
       tags: ['bastion' ]
 
-    - name: Create group ManageYourOwnUser in the bastion account
+    - name: Create default groups in the bastion account
       iam_group:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
         security_token: "{{ assumed_role.sts_creds.session_token }}"
-        name: "ManageYourOwnUser"
+        name: "{{ item }}"
         state: present
+      with_items:
+        - Admin
+        - ManageYourOwnUser
+        - AssumeAdmin-dev
+        - AssumeAdmin-tst
+        - AssumeAdmin-prd
+        - AssumePower-dev
+        - AssumePower-tst
+        - AssumePower-prd
+        - AssumeRead-dev
+        - AssumeRead-tst
+        - AssumeRead-prd
       tags: ['bastion' ]
 
     - name: Create users in the bastion account
@@ -97,6 +109,21 @@
       when: aws_users is defined
       tags: [ 'bastion', 'create_users' ]
       
+    - name: Create policies for Assume<Role>-<env> and assignt to the respective groups
+      iam_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: group
+        iam_name: "Assume{{ item[0] }}-{{ item[1] }}"
+        policy_name: "AssumeRole"
+        policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-many.json.j2') }}"
+        state: present
+      with_nested:
+        - [ 'Admin', 'Power', 'Read' ]
+        - [ 'dev', 'tst', 'prd' ]
+      tags: [ 'bastion' ]
+
     - name: Create policy ManageYourOwnUser in the bastion account and assign it to the group with the same name
       iam_policy:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
@@ -117,12 +144,21 @@
         iam_type: group
         iam_name: "{{ item[0].name }}-{{ item[1].name }}"
         policy_name: "AssumeRole"
-        policy_json: "{{ lookup('template', 'bastion-group.json.j2') }}"
+        policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-one.json.j2') }}"
         state: present
       with_nested:
         - "{{ aws_groups }}"
         - "{{ subaccounts }}"
       tags: [ 'bastion_grouppolicy', 'bastion' ]
+    - name: Assign AdministratorAccess policies to the Admin group in the bastion account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "Admin"
+        managed_policy: "AdministratorAccess"
+        state: present
+      tags: [ 'bastion' ]
 
     - name: Set password policy rules on the bastion account
       command: >

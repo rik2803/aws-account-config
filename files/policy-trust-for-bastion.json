@@ -1,0 +1,21 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::__BASTIONACCOUNTID__:root"
+      },
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "Bool": {
+          "aws:MultiFactorAuthPresent": "true",
+          "aws:SecureTransport": "true"
+        },
+        "NumericLessThan": {
+          "aws:MultiFactorAuthAge": "43200"
+        }
+      }
+    }
+  ]
+}
