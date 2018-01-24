@@ -5,6 +5,9 @@
   <meta charset = "UTF-8" />
 </head>
 <body>
+  <h2>URL for the Bastion AWS Console</h2>
+    <a target="_blank" href="{{ bastion_account.console_url | default('Not configured in organizaton inventory') }}">Bastion Account Console</a><br/>
+
   <h2>Links from bastion account to {{ org }} subaccounts</h2>
 
   For these links to work, you should be logged in to the bastion account <em>and</em> you have to belong to the group

@@ -79,6 +79,12 @@
         - AssumeRead-dev
         - AssumeRead-tst
         - AssumeRead-prd
+        - AssumeAdmin-ixor
+        - AssumeAdmin-ixortalk
+        - AssumePower-ixor
+        - AssumePower-ixortalk
+        - AssumeRead-ixor
+        - AssumeRead-ixortalk
       tags: ['bastion' ]
 
     - name: Create users in the bastion account
@@ -110,7 +116,7 @@
       when: aws_users is defined
       tags: [ 'bastion', 'create_users' ]
       
-    - name: Create policies for Assume<Role>-<env> and assignt to the respective groups
+    - name: Create policies for Assume<Role>-<env> and assign to the respective groups
       iam_policy:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
@@ -123,6 +129,21 @@
       with_nested:
         - [ 'Admin', 'Power', 'Read' ]
         - [ 'dev', 'tst', 'prd' ]
+      tags: [ 'bastion' ]
+
+    - name: Create policies for Assume<Role>-<organization> and assign to the respective groups
+      iam_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: group
+        iam_name: "Assume{{ item[0] }}-{{ item[1] }}"
+        policy_name: "AssumeRole"
+        policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-organization.json.j2') }}"
+        state: present
+      with_nested:
+        - [ 'Admin', 'Power', 'Read' ]
+        - [ 'ixor', 'ixortalk' ]
       tags: [ 'bastion' ]
 
     - name: Create policy ManageYourOwnUser in the bastion account and assign it to the group with the same name
