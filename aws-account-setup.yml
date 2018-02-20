@@ -9,22 +9,26 @@
       register: region
       failed_when: false
       changed_when: false
+      tags: [ 'always' ]
     - name: Test AWS_SECRET_ACCESS_KEY
       shell: "[[ -n $AWS_SECRET_ACCESS_KEY ]]"
       register: secret
       failed_when: false
       changed_when: false
+      tags: [ 'always' ]
     - name: Test AWS_ACCESS_KEY_ID
       shell: "[[ -n $AWS_ACCESS_KEY_ID ]]"
       register: key
       failed_when: false
       changed_when: false
+      tags: [ 'always' ]
     - name: Test if config file exists
       stat:
         path: "{{ config_file }}"
       register: configfile
       failed_when: false
       changed_when: false
+      tags: [ 'always' ]
     - name: Do assertions on configfile and AWS credential envvars
       assert:
         that:
@@ -33,6 +37,7 @@
           - "secret.rc == 0"
           - "region.rc == 0"
           - "configfile.stat.exists"
+      tags: [ 'always' ]
 
   vars_files:
     - "{{ config_file }}"
@@ -46,7 +51,7 @@
         role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
       register: assumed_role
-      tags: ['bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users' ]
+      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users' ]
 
     - name: Create groups in the bastion account
       iam_group:
@@ -58,7 +63,31 @@
       with_nested:
         - "{{ aws_groups }}"
         - "{{ subaccounts }}"
-      tags: ['bastion' ]
+      tags: [ 'bastion' ]
+
+    - name: Create default groups for the environments in the bastion account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "Assume{{ item[0] }}-{{ item[1] }}"
+        state: present
+      with_nested:
+        - [ 'Admin', 'Power', 'Read' ]
+        - "{{ environments | default([]) }}"
+      tags: [ 'bastion' ]
+
+    - name: Create default groups for the entities in the bastion account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "Assume{{ item[0] }}-{{ item[1] }}"
+        state: present
+      with_nested:
+        - [ 'Admin', 'Power', 'Read' ]
+        - "{{ entities | default([]) }}"
+      tags: [ 'bastion' ]
 
     - name: Create default groups in the bastion account
       iam_group:
@@ -70,22 +99,7 @@
       with_items:
         - Admin
         - ManageYourOwnUser
-        - AssumeAdmin-dev
-        - AssumeAdmin-tst
-        - AssumeAdmin-prd
-        - AssumePower-dev
-        - AssumePower-tst
-        - AssumePower-prd
-        - AssumeRead-dev
-        - AssumeRead-tst
-        - AssumeRead-prd
-        - AssumeAdmin-ixor
-        - AssumeAdmin-ixortalk
-        - AssumePower-ixor
-        - AssumePower-ixortalk
-        - AssumeRead-ixor
-        - AssumeRead-ixortalk
-      tags: ['bastion' ]
+      tags: [ 'bastion' ]
 
     - name: Create users in the bastion account
       iam:
@@ -116,6 +130,7 @@
       when: aws_users is defined
       tags: [ 'bastion', 'create_users' ]
       
+    ### There might be environments (i.e. tst) that has no associated account, that's OK
     - name: Create policies for Assume<Role>-<env> and assign to the respective groups
       iam_policy:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
@@ -128,8 +143,9 @@
         state: present
       with_nested:
         - [ 'Admin', 'Power', 'Read' ]
-        - [ 'dev', 'tst', 'prd' ]
+        - "{{ environments | default([]) }}"
       tags: [ 'bastion' ]
+      ignore_errors: true
 
     - name: Create policies for Assume<Role>-<organization> and assign to the respective groups
       iam_policy:
@@ -143,7 +159,7 @@
         state: present
       with_nested:
         - [ 'Admin', 'Power', 'Read' ]
-        - [ 'ixor', 'ixortalk' ]
+        - "{{ entities | default([]) }}"
       tags: [ 'bastion' ]
 
     - name: Create policy ManageYourOwnUser in the bastion account and assign it to the group with the same name
@@ -261,5 +277,5 @@
     - name: create html file
       template:
         src: aws-crossaccount-links.j2
-        dest: "/tmp/{{ org }}.html"
+        dest: "~/aws-account-config/{{ org }}.html"
       tags: [ 'html' ]

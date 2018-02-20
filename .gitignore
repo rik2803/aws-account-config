@@ -1,1 +1,4 @@
 *retry
+setup*.bash
+*html
+.idea

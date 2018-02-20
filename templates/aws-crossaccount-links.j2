@@ -20,7 +20,7 @@
   <h3>Roles for account {{ account.name }}</h3>
   <ul>
 {%   for role in aws_roles %}
-    <li><a target="_blank" href="https://signin.aws.amazon.com/switchrole?account={{ account.account_id }}&roleName={{ role.name }}&displayName={{ account.name }}_{{ role.name }}">Assume role {{ role.name }}</a></li>
+    <li><a target="_blank" href="https://signin.aws.amazon.com/switchrole?account={{ account.account_id }}&roleName={{ role.name }}&displayName={{ account.name }}_{{ role.name }}">Assume role {{ role.name }} on account {{ account.name }}</a></li>
 {%   endfor %}
   </ul>
 {% endfor %}
