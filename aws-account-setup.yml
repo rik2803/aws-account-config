@@ -65,6 +65,15 @@
         - "{{ subaccounts }}"
       tags: [ 'bastion' ]
 
+    - name: Create billing group in the bastion account for billing access to organization account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "AssumeBilling-{{ organization.name | default('org') }}"
+        state: present
+      tags: [ 'bastion' ]
+
     - name: Create default groups for the environments in the bastion account
       iam_group:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
@@ -117,7 +126,7 @@
       when: aws_users is defined
       tags: [ 'bastion', 'create_users' ]
 
-    - name: Assign user to groups in the bastion accuont
+    - name: Assign user to groups in the bastion account
       iam:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
@@ -171,6 +180,18 @@
         iam_name: "ManageYourOwnUser"
         policy_name: "ManageYourOwnUser"
         policy_json: "{{ lookup('file', 'ManageYourOwnUser.json') }}"
+        state: present
+      tags: [ 'bastion' ]
+
+    - name: Create policy Billing in the bastion account and assign it to the billing group
+      iam_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: group
+        iam_name: "AssumeBilling-{{ organization.name | default('org') }}"
+        policy_name: "AssumeRole"
+        policy_json: "{{ lookup('template', 'bastion-group-policy-billing.json.j2') }}"
         state: present
       tags: [ 'bastion' ]
 
@@ -241,7 +262,7 @@
         AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
         AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
-        AWS_DEFAULT_REGION: "{{ item.region | default('eu-central-1') }}"
+        AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
       with_items: "{{ assumed_role_subaccount_single.results }}"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
       tags: [ 'subaccounts', 'passwordpolicy' ]
@@ -272,6 +293,16 @@
       with_items: "{{ assumed_role_subaccount.results }}"
       when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item[0].name )"
       tags: [ 'subaccounts', 'createroles' ]
+
+    ### Role for billing on org account
+    - name: Create billing role on organization account for trusted access from the bastion account
+      iam_role:
+        name: "billing"
+        assume_role_policy_document: "{{ lookup('file', 'policy-trust-for-bastion.json') | regex_replace('__BASTIONACCOUNTID__', bastion_account.account_id) }}"
+        managed_policy: "Billing"
+        state: present
+      no_log: True
+      tags: [ 'subaccounts', 'createroles', 'billing' ]
 
     ### create html file with cross-account urls
     - name: create html file

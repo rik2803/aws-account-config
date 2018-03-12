@@ -1,0 +1,34 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "sts:AssumeRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::{{ organization.account_id }}:role/billing"
+      ],
+      "Effect": "Allow",
+      "Condition": {
+        "NumericLessThan": {
+          "aws:MultiFactorAuthAge": "43200"
+        },
+        "Bool": {
+          "aws:MultiFactorAuthPresent": "true",
+          "aws:SecureTransport": "true"
+        }
+      },
+      "Sid": "1"
+    },
+    {
+      "Action": [
+        "sts:GetSessionToken"
+      ],
+      "Resource": [
+        "arn:aws:iam::{{ organization.account_id }}:role/billing"
+      ],
+      "Effect": "Allow",
+      "Sid": "2"
+    }
+  ]
+}
