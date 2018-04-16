@@ -133,5 +133,5 @@ as the _Bastion_ account, all subaccounts, users and group membership for the us
 ## Create the HTML page with the x-account links
 
 ```
-ansible-platbook aws-account-setup.yml --extra-vars=config_file=../aws-account-config-ixor/aws-account-config.yml --tags=html
+ansible-playbook aws-account-setup.yml --extra-vars=config_file=../aws-account-config-ixor/aws-account-config.yml --tags=html
 ```

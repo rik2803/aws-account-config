@@ -294,6 +294,30 @@
       when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item[0].name )"
       tags: [ 'subaccounts', 'createroles' ]
 
+    - name: Set the SDK/CLI session duration for the role
+      command: >
+        aws iam update-role --role-name "{{ item.item[1].name }}" --max-session-duration "{{ item.item[1].max_session_duration | default(3600) }}"
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
+        AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
+        AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
+      with_items: "{{ assumed_role_subaccount.results }}"
+      when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item[0].name )"
+      tags: [ 'subaccounts', 'createroles' ]
+
+    - name: Upload pubkey for the account
+      ec2_key:
+        aws_access_key: "{{ item.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+        security_token: "{{ item.sts_creds.session_token }}"
+        name: "id_rsa_{{ item.item[0].name }}"
+        key_material: "{{ item.item[0].pubkey }}"
+        state: present
+      with_items: "{{ assumed_role_subaccount.results }}"
+      when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item[0].name ) and item.item[0].pubkey is defined"
+      tags: [ 'subaccounts' ]
+
     ### Role for billing on org account
     - name: Create billing role on organization account for trusted access from the bastion account
       iam_role:
@@ -308,5 +332,5 @@
     - name: create html file
       template:
         src: aws-crossaccount-links.j2
-        dest: "~/aws-account-config/{{ org }}.html"
+        dest: "~/projects/AWS/aws-account-config/{{ org }}.html"
       tags: [ 'html' ]
