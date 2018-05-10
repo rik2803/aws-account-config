@@ -1,0 +1,57 @@
+<!DOCTYPE HTML>
+<html lang = "en">
+<head>
+  <title>{{ org }} AWS Cross Account Links</title>
+  <meta charset = "UTF-8" />
+  <style>
+    * { font-family: sans-serif; }
+    table, th, td { border: 1px solid black; }
+    table { border-collapse: collapse; }
+  </style>
+</head>
+<body>
+  <h2>URL for the Bastion AWS Console</h2>
+    <a target="_blank" href="{{ bastion_account.console_url | default('Not configured in organizaton inventory') }}">Bastion Account Console</a><br/>
+
+  <h2>Links from bastion account to {{ org }} subaccounts</h2>
+
+  For these links to work, you should be logged in to the bastion account <em>and</em> you have to belong to the group
+  on the <em>Bastion</em> that allows you to assume the chosen role on the target or trusting account.
+
+  If not sure, or if you think you require access to a certain role on a certain AWS sub-account, mail to
+  <a href=mailto://aws@ixor.be>aws@ixor.be</a>.
+<br>
+<br>
+<table>
+  <tr>
+    <th>Account</th>
+{%   for role in aws_roles %}
+    <th>{{ role.name }}</th>
+{%   endfor %}
+  </tr>
+{% for account in subaccounts %}
+  <tr>
+    <td>{{ account.name }}</td>
+{%   for role in aws_roles %}
+    <td><a target="_blank" href="https://signin.aws.amazon.com/switchrole?account={{ account.account_id }}&roleName={{ role.name }}&displayName={{ account.name }}_{{ role.name }}">{{ account.name }}-{{ role.name }}</a></td>
+{%   endfor %}
+  </tr>
+{% endfor %}
+</table>
+
+  <h2>Links from org account to {{ org }} subaccounts</h2>
+
+  For these links to work, you should be logged in to the organization account <em>and</em> you have to belong to the group
+  on the <em>Bastion</em> that allows you to assume the chosen role on the target or trusting account.
+
+  Very few people should be using this kind of cross account links, please check the bastion section.
+
+<br>
+<br>
+<table>
+  <tr><th>Assume OrganizationAccountAccessRole</th></tr>
+  <tr><td><a target="_blank" href="https://signin.aws.amazon.com/switchrole?account={{ bastion_account.account_id }}&roleName=OrganizationAccountAccessRole&displayName={{ bastion_account.name }}_OrganizationAccountAccessRole">{{ bastion_account.name }}</a></td></tr>
+{% for account in subaccounts %}
+  <tr><td><a target="_blank" href="https://signin.aws.amazon.com/switchrole?account={{ account.account_id }}&roleName=OrganizationAccountAccessRole&displayName={{ account.name }}_OrganizationAccountAccessRole">{{ account.name }}</a></td></tr>
+{% endfor %}
+</table>

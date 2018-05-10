@@ -334,3 +334,8 @@
         src: aws-crossaccount-links.j2
         dest: "~/projects/AWS/aws-account-config/{{ org }}.html"
       tags: [ 'html' ]
+    - name: create html file
+      template:
+        src: aws-crossaccount-links-table.j2
+        dest: "~/projects/AWS/aws-account-config/{{ org }}-table.html"
+      tags: [ 'html' ]
