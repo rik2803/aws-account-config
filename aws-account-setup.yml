@@ -4,39 +4,43 @@
   gather_facts: false
 
   pre_tasks:
-    - name: Test AWS_REGION
-      shell: "[[ -n $AWS_REGION ]]"
-      register: region
-      failed_when: false
-      changed_when: false
-      tags: [ 'always' ]
-    - name: Test AWS_SECRET_ACCESS_KEY
-      shell: "[[ -n $AWS_SECRET_ACCESS_KEY ]]"
-      register: secret
-      failed_when: false
-      changed_when: false
-      tags: [ 'always' ]
-    - name: Test AWS_ACCESS_KEY_ID
-      shell: "[[ -n $AWS_ACCESS_KEY_ID ]]"
-      register: key
-      failed_when: false
-      changed_when: false
-      tags: [ 'always' ]
-    - name: Test if config file exists
-      stat:
-        path: "{{ config_file }}"
-      register: configfile
-      failed_when: false
-      changed_when: false
-      tags: [ 'always' ]
-    - name: Do assertions on configfile and AWS credential envvars
-      assert:
-        that:
-          - "config_file is defined"
-          - "key.rc == 0"
-          - "secret.rc == 0"
-          - "region.rc == 0"
-          - "configfile.stat.exists"
+    - name: BLock for pre_tasks
+      block:
+      - name: Test AWS_REGION
+        shell: "[[ -n $AWS_REGION ]]"
+        register: region
+        failed_when: false
+        changed_when: false
+      - name: Test AWS_SECRET_ACCESS_KEY
+        shell: "[[ -n $AWS_SECRET_ACCESS_KEY ]]"
+        register: secret
+        failed_when: false
+        changed_when: false
+      - name: Test AWS_ACCESS_KEY_ID
+        shell: "[[ -n $AWS_ACCESS_KEY_ID ]]"
+        register: key
+        failed_when: false
+        changed_when: false
+      - name: Test if config file exists
+        stat:
+          path: "{{ config_file }}"
+        register: configfile
+        failed_when: false
+        changed_when: false
+      - name: Do assertions on configfile and AWS credential envvars
+        assert:
+          that:
+            - "config_file is defined"
+            - "key.rc == 0"
+            - "secret.rc == 0"
+            - "region.rc == 0"
+            - "configfile.stat.exists"
+      - name: Set global facts
+        block:
+          - name: Convert organization name to CamelCase
+            set_fact:
+              cfn_org_name: "{{ organization.name | title }}"
+
       tags: [ 'always' ]
 
   vars_files:
@@ -46,6 +50,124 @@
     - subaccount_limit: "{{ subaccount | default('all') }}"
 
   tasks:
+
+    ### Specific Bastion Setup
+    - name: Block for specific Bastion Setup
+      block:
+        - name: Assume Role for bastion account
+          sts_assume_role:
+            role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
+            role_session_name: "security-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
+          register: bastion_assumed_role
+
+        - name: Create role AWSCloudFormationStackSetExecutionRole on bastion account for StackSets on the organization account
+          iam_role:
+            aws_access_key: "{{ bastion_assumed_role.sts_creds.access_key }}"
+            aws_secret_key: "{{ bastion_assumed_role.sts_creds.secret_key }}"
+            security_token: "{{ bastion_assumed_role.sts_creds.session_token }}"
+            name: "AWSCloudFormationStackSetExecutionRole"
+            assume_role_policy_document: "{{ lookup('template', 'policy-trust-for-stackset-execution.json.j2') }}"
+            managed_policy: "arn:aws:iam::aws:policy/AdministratorAccess"
+            state: present
+          no_log: True
+
+      tags: [ 'bastion' ]
+
+    ### Setup security account
+    - name: Block for security tasks
+      block:
+        - name: Assume role for security/admin
+          sts_assume_role:
+            role_arn: "arn:aws:iam::{{ security_account.account_id }}:role/{{ security_account.sts_role | default('OrganizationAccountAccessRole') }}"
+            role_session_name: "security-{{ security_account.name }}-{{ security_account.sts_role | default('OrganizationAccountAccessRole') }}"
+          register: security_assumed_role
+        - name: Create CFN template from Ansible template for the security account setup
+          template:
+            src: "cfn-security.yml"
+            dest: "generated-files/cfn-{{ organization.name }}-security.yml"
+        - name: Create or Update the security account setup Stack
+          cloudformation:
+            aws_access_key: "{{ security_assumed_role.sts_creds.access_key }}"
+            aws_secret_key: "{{ security_assumed_role.sts_creds.secret_key }}"
+            security_token: "{{ security_assumed_role.sts_creds.session_token }}"
+            stack_name: "{{ cfn_org_name }}Security"
+            state: "present"
+            disable_rollback: false
+            template: "generated-files/cfn-{{ organization.name }}-security.yml"
+
+        ### Create/Update Security StackSet on the org account
+        - name: Create CFN template from Ansible template for the security account StackSet setup
+          template:
+            src: cfn-stackset-security.yml
+            dest: "generated-files/cfn-stackset-{{ organization.name }}-security.yml"
+
+        - name: Check if StackSet already exists
+          command: >
+            aws cloudformation describe-stack-set --stack-set-name {{ organization.name }}-security
+          register: security_stackset
+          ignore_errors: true
+
+        - name: Create the security stackset on the organization account if not already there
+          command: >
+            aws cloudformation create-stack-set
+                --stack-set-name {{ organization.name }}-security
+                --description "Stack set to install security features on all accounts"
+                --template-body "file://generated-files/cfn-stackset-{{ organization.name }}-security.yml"
+                --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+          register: stack_set_create
+          when: security_stackset.rc != 0
+#        - name: Update the security stackset on the organization account if it already exists
+#          command: >
+#            aws cloudformation update-stack-set
+#                --stack-set-name {{ organization.name }}-security
+#                --description "Stack set to install security features on all accounts"
+#                --template-body "file://generated-files/cfn-stackset-{{ organization.name }}-security.yml"
+#                --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+#          register: stack_set_update
+#          when: security_stackset.rc == 0
+
+
+        ### Create/Update Stack Instances for the Security StackSet
+        ### REMARK: The playbook might have to be run twice, if stack-set and
+        ###         stack-set-instance both require a change, for example
+        ###         if the template was updated AND a new account was added.
+        - name: Check if StackInstance already exists
+          command: >
+            aws cloudformation describe-stack-instance
+                --stack-set-name {{ organization.name }}-security
+                --stack-instance-account {{ item[0] }}
+                --stack-instance-region {{ item[1] }}
+          register: security_stackinstances
+          ignore_errors: true
+          register: "security_stackset_instances"
+          with_nested:
+            - "{{ lookup('template', 'all_accounts.txt.j2').split(' ') }}"
+            - [ "eu-west-1", "eu-west-2", "eu-west-3", "eu-central-1" ]
+
+        - name: Create the security stackset instance on the organization account if not already there
+          command: >
+            aws cloudformation create-stack-instances
+                --stack-set-name {{ organization.name }}-security
+                --accounts {{ item.item[0] }}
+                --regions {{ item.item[1] }}
+                --operation-preferences MaxConcurrentCount=10,FailureToleranceCount=10
+          when: item.rc != 0 and not stack_set_create.changed
+          with_items: "{{ security_stackset_instances.results }}"
+
+        - name: Create the security stackset instance on the organization account if not already there
+          command: >
+            aws cloudformation update-stack-instances
+                --stack-set-name {{ organization.name }}-security
+                --accounts {{ item.item[0] }}
+                --regions {{ item.item[1] }}
+                --operation-preferences MaxConcurrentCount=10,FailureToleranceCount=10
+          when: item.rc == 0 and not stack_set_create.changed
+          with_items: "{{ security_stackset_instances.results }}"
+
+      when: security_account is defined
+      tags: [ 'security' ]
+
+    ### The rest of the PB
     - name: Assume role for bastion/admin
       sts_assume_role:
         role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
@@ -138,7 +260,7 @@
       with_items: "{{ aws_users }}"
       when: aws_users is defined
       tags: [ 'bastion', 'create_users' ]
-      
+
     ### There might be environments (i.e. tst) that has no associated account, that's OK
     - name: Create policies for Assume<Role>-<env> and assign to the respective groups
       iam_policy:
@@ -236,7 +358,6 @@
         AWS_DEFAULT_REGION: "{{ assumed_role.region | default('eu-central-1') }}"
       tags: [ 'bastion', 'passwordpolicy' ]
 
-
     ### Assumes role for setting the password policy on the subaccounts
     - name: Assume role for subaccounts
       sts_assume_role:
@@ -246,7 +367,7 @@
       with_items:
         - "{{ subaccounts }}"
       when: "bastion_account.account_id != item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.name )"
-      tags: [ 'subaccounts', 'passwordpolicy' ]
+      tags: [ 'always' ]
 
     - name: Set password policy rules on the sub accounts
       command: >
@@ -286,13 +407,26 @@
         aws_secret_key: "{{ item.sts_creds.secret_key }}"
         security_token: "{{ item.sts_creds.session_token }}"
         name: "{{ item.item[1].name }}"
-        assume_role_policy_document: "{{ lookup('file', 'policy-trust-for-bastion.json') | regex_replace('__BASTIONACCOUNTID__', bastion_account.account_id) }}"
+        assume_role_policy_document: "{{ lookup('template', 'policy-trust-for-bastion.json.j2') }}"
         managed_policy: "{{ item.item[1].managed_policies }}"
         state: present
       no_log: True
       with_items: "{{ assumed_role_subaccount.results }}"
       when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item[0].name )"
       tags: [ 'subaccounts', 'createroles' ]
+
+    - name: Create role AWSCloudFormationStackSetExecutionRole on subaccounts for StackSets on the organization account
+      iam_role:
+        aws_access_key: "{{ item.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+        security_token: "{{ item.sts_creds.session_token }}"
+        name: "AWSCloudFormationStackSetExecutionRole"
+        assume_role_policy_document: "{{ lookup('template', 'policy-trust-for-stackset-execution.json.j2') }}"
+        managed_policy: "arn:aws:iam::aws:policy/AdministratorAccess"
+        state: present
+      no_log: True
+      with_items: "{{ assumed_role_subaccount_single.results }}"
+      tags: [ 'subaccounts', 'createroles', 'organization' ]
 
     - name: Set the SDK/CLI session duration for the role
       command: >
@@ -322,11 +456,30 @@
     - name: Create billing role on organization account for trusted access from the bastion account
       iam_role:
         name: "billing"
-        assume_role_policy_document: "{{ lookup('file', 'policy-trust-for-bastion.json') | regex_replace('__BASTIONACCOUNTID__', bastion_account.account_id) }}"
+        assume_role_policy_document: "{{ lookup('template', 'policy-trust-for-bastion.json.j2') }}"
         managed_policy: "Billing"
         state: present
       no_log: True
       tags: [ 'subaccounts', 'createroles', 'billing' ]
+
+    ### Role for StackSets on organization account
+    - name: Create AWSCloudFormationStackSetAdministrationRole role on organization account
+      iam_role:
+        name: "AWSCloudFormationStackSetAdministrationRole"
+        assume_role_policy_document: "{{ lookup('file', 'policy-trust-for-stackset-admin.json') }}"
+        state: present
+      no_log: True
+      tags: [ 'subaccounts', 'createroles', 'organization' ]
+
+    ### Create Policy for use in AWSCloudFormationStackSetAdministrationRole
+    - name: Create policies for use in AWSCloudFormationStackSetAdministrationRole
+      iam_policy:
+        iam_type: role
+        iam_name: "AWSCloudFormationStackSetAdministrationRole"
+        policy_name: "AssumeRole-AWSCloudFormationStackSetExecutionRole"
+        policy_json: "{{ lookup('template', 'organization-role-policy-for-stackset-admin.json.j2') }}"
+        state: present
+      tags: [ 'subaccounts', 'createroles', 'organization' ]
 
     ### create html file with cross-account urls
     - name: create html file
