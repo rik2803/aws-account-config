@@ -1,0 +1,285 @@
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <title>AWS Accounts</title>
+
+    <link rel="stylesheet" href="css/styles.css?v=1.0">
+
+</head>
+
+<body>
+<script>
+    window.rolemapping = {
+        "AssumePower": "power",
+        "AssumeAdmin": "admin",
+        "AssumeRead": "read",
+        "AssumePowerLocal": "powerlocal",
+        "AssumeAdminLocal": "adminlocal",
+        "AssumeReadLocal": "readlocal",
+    }
+    window.users = {
+        "aws_users": [
+            {
+                "name": "rtytgat",
+                "groups": [
+                    "Admin"
+                ]
+            },
+            {
+                "name": "roel.verbeeck@ixor.be",
+                "groups": [
+                    "AssumeBilling-ixor"
+                ]
+            },
+            {
+                "name": "magda.desmet@ixor.be",
+                "groups": [
+                    "AssumeBilling-ixor"
+                ]
+            },
+            {
+                "name": "wim.declercq@ixor.be",
+                "groups": [
+                    "Admin"
+                ]
+            },
+            {
+                "name": "serge.vandewyer@ixor.be",
+                "groups": [
+                    "AssumePowerLocal-ixor.ixordocs-dev",
+                    "AssumePowerLocal-ixor.ixordocs-prd",
+                    "AssumePowerLocal-ixor.ixor-prd",
+                    "AssumePowerLocal-ixor.doccleqa-admin",
+                    "AssumePowerLocal-ixor.doccle-prd",
+                    "AssumePowerLocal-ixor.doccleweb-prd"
+                ]
+            },
+            {
+                "name": "jan.caals@ixor.be",
+                "groups": [
+                    "AssumePowerLocal-ixor.ixordocs-dev",
+                    "AssumePowerLocal-ixor.ixordocs-prd",
+                    "AssumePowerLocal-ixor.ixor-prd",
+                    "AssumePowerLocal-ixor.doccleqa-admin",
+                    "AssumePowerLocal-ixor.doccle-prd",
+                    "AssumePowerLocal-ixor.doccleweb-prd"
+                ]
+            },
+            {
+                "name": "kenny.goossens@ixor.be",
+                "groups": [
+                    "AssumePowerLocal-ixor.ixordocs-dev",
+                    "AssumePowerLocal-ixor.ixordocs-prd",
+                    "AssumePowerLocal-ixor.ixor-prd"
+                ]
+            },
+            {
+                "name": "robin.hellemans@ixortalk.com",
+                "groups": [
+                    "AssumePowerLocal-ixortalk",
+                    "AssumeAdminLocal-ixortalk",
+                    "AssumeReadLocal-ixor.tooling",
+                    "AssumeAdminLocal-ixor.sandbox",
+                    "AssumeAdminLocal-ixor.sandbox2"
+                ]
+            },
+            {
+                "name": "ward.jans@ixortalk.com",
+                "groups": [
+                    "AssumePowerLocal-ixortalk",
+                    "AssumeAdminLocal-ixortalk",
+                    "AssumeReadLocal-ixor.tooling",
+                    "AssumeAdminLocal-ixor.sandbox",
+                    "AssumeAdminLocal-ixor.sandbox2"
+                ]
+            },
+            {
+                "name": "davy.dewaele@ixortalk.com",
+                "groups": [
+                    "AssumePowerLocal-ixortalk",
+                    "AssumeAdminLocal-ixortalk",
+                    "AssumeAdminLocal-ixor.sandbox",
+                    "AssumeAdminLocal-ixor.sandbox2",
+                    "AssumeReadLocal-ixor.tooling"
+                ]
+            },
+            {
+                "name": "wim.drapier@ixor.be",
+                "groups": [
+                    "AssumeReadLocal-ixortalk"
+                ]
+            }
+        ]
+    }
+    window.accounts = {
+        "subaccounts": [
+            {
+                "name": "ixor.security",
+                "account_id": "697387761430",
+                "environment": "prd",
+                "remark": "Account dedicated for security purposes"
+            },
+            {
+                "name": "ixor.ixor-prd",
+                "account_id": "320991539096",
+                "environment": "prd",
+                "remark": "Cleanup. After this, the account is exclusively used as organization account"
+            },
+            {
+                "name": "ixortalk.udini-prd",
+                "account_id": "122858862494",
+                "environment": "stg"
+            },
+            {
+                "name": "ixortalk.udini-stg",
+                "account_id": "977615716192",
+                "environment": "prd"
+            },
+            {
+                "name": "ixortalk.udini-tst",
+                "account_id": "356767515722",
+                "environment": "tst"
+            },
+            {
+                "name": "ixortalk.tooling",
+                "account_id": "192161175773",
+                "environment": "prd"
+            },
+            {
+                "name": "ixor.tooling",
+                "account_id": "678053966837",
+                "environment": "prd"
+            },
+            {
+                "name": "ixor.sandbox",
+                "account_id": "365354788990",
+                "environment": "sandbox"
+            },
+            {
+                "name": "ixor.sandbox2",
+                "account_id": "723071428250",
+                "environment": "sandbox"
+            },
+            {
+                "name": "ixor.ixordocs-dev",
+                "account_id": "530152727664",
+                "environment": "dev"
+            },
+            {
+                "name": "ixor.dct-dev",
+                "account_id": "621579522601",
+                "environment": "dev"
+            },
+            {
+                "name": "ixor.acerta-admin",
+                "account_id": "700911733976",
+                "environment": "prd"
+            },
+            {
+                "name": "ixor.ixordocs-prd",
+                "account_id": "632928949881",
+                "environment": "prd"
+            },
+            {
+                "name": "ixor.doccleqa-admin",
+                "account_id": "036136627718",
+                "environment": "tst"
+            },
+            {
+                "name": "ixor.edcm-dev",
+                "account_id": "117806511031",
+                "environment": "dev"
+            },
+            {
+                "name": "ixor.doccle-prd",
+                "account_id": "180676443074",
+                "environment": "prd"
+            },
+            {
+                "name": "ixor.acerta-tst",
+                "account_id": "185035220394",
+                "environment": "tst"
+            },
+            {
+                "name": "ixor.doccleweb-prd",
+                "account_id": "306231411624",
+                "environment": "prd",
+                "inorganization": true
+            },
+            {
+                "name": "ooliba.tooling",
+                "account_id": "424061574465",
+                "environment": "prd",
+                "inorganization": true
+            },
+            {
+                "name": "ixortalk.zyzo-stg",
+                "account_id": "144648532663",
+                "environment": "stg",
+                "inorganization": true
+            }
+        ]
+    }
+</script>
+<script>
+    var vars = location.href.split('?')[1].split('&').map(str => str.split('=')).reduce(function(prev, v) {return Object.assign(prev, {[v[0]]: v[1]})}, {})
+    var selectedUserName = vars.user
+
+    var selectedUser = users.aws_users.find(
+        function(user) {
+            return user.name === selectedUserName
+        }
+    )
+    var groups = selectedUser.groups
+    var parsedGroups = groups.map(
+        function(groupString) {
+            var split = groupString.split('-')
+            return {role: split[0], account: split[1]}
+        }
+    )
+
+    var matchingAccounts = accounts.subaccounts.filter(
+        function(account) {
+            return parsedGroups.some(
+                function(group) {
+                    return account.name.indexOf(group.account) !== -1
+                }
+            )
+        }
+    )
+
+    var string = JSON.stringify(matchingAccounts)
+    console.log(string)
+
+    var list = new Set()
+
+    parsedGroups.forEach(
+        function (value) {
+            var role = value.role
+            var account = value.account
+            var remoterole = rolemapping[role]
+
+            console.log(value)
+            console.log(remoterole)
+
+            matchingAccounts.forEach(
+                function (t) {
+                    list.add('<a href="https://signin.aws.amazon.com/switchrole?account=' + t.account_id + '&roleName=' + remoterole + '&displayName=' + t.name +'">' + t.name + ' ' + remoterole + '</a><br>')
+                }
+            )
+
+        }
+    )
+
+    document.write('<h2>AWS Cross Account links for ' + vars.user + '</h2><ul>')
+    list.forEach(
+        function(t) {
+            document.write('<li>' + t + '</li>')
+        }
+    )
+    document.write('</ul><br>')
+
+</script>
+</body>
+</html>
