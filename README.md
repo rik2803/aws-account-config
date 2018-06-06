@@ -10,6 +10,17 @@
   * `AWS_REGION`
 * A configuration file that describes your complete account setup
 
+## PlayBooks in this repo
+
+### `aws-account-setup`
+
+This is the main playbook, and it includes all other playbooks
+
+### `aws-account-basic-setup.yml`
+
+### `aws-account-security-setup.yml`
+
+
 ## What the playbook does
 
 

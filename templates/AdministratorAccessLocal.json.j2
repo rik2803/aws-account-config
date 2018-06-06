@@ -1,0 +1,35 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:*",
+        "iam:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "NotAction": [
+        "s3:*",
+        "iam:*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": [
+{% if aws_local_regions is not defined %}
+            "eu-central-1",
+            "eu-west-3"
+{% else %}
+{%   for region in aws_local_regions %}
+            "{{ region }}"{% if not loop.last %},{% endif %}
+{%   endfor %}
+{% endif %}
+          ]
+        }
+      }
+    }
+  ]
+}

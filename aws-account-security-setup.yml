@@ -1,0 +1,60 @@
+---
+  ### Setup security account
+  ###   Configure {{ security_account.name }} account
+  ###     - Log bucket for security related files
+  ###     - Bucket policy to allow all accounts to access the bucket
+  - name: Block for security setup on the security account
+    block:
+      - name: Assume role for security/admin
+        sts_assume_role:
+          role_arn: "arn:aws:iam::{{ security_account.account_id }}:role/{{ security_account.sts_role | default('OrganizationAccountAccessRole') }}"
+          role_session_name: "security-{{ security_account.name }}-{{ security_account.sts_role | default('OrganizationAccountAccessRole') }}"
+        register: security_assumed_role
+      - name: Create CFN template from Ansible template for the security account setup
+        template:
+          src: "cfn-security-account-setup.yml"
+          dest: "generated-files/cfn-{{ organization.name }}-security-account-setup.yml"
+      - name: Create or Update the security account setup Stack
+        cloudformation:
+          aws_access_key: "{{ security_assumed_role.sts_creds.access_key }}"
+          aws_secret_key: "{{ security_assumed_role.sts_creds.secret_key }}"
+          security_token: "{{ security_assumed_role.sts_creds.session_token }}"
+          stack_name: "{{ cfn_org_name }}Security"
+          state: "present"
+          disable_rollback: false
+          template: "generated-files/cfn-{{ organization.name }}-security-account-setup.yml"
+    when: security_account is defined
+    tags: [ 'security' ]
+
+  ### This section creates a security CloudFormation Stack on all accounts
+  ### The Ansible template does not contain subaccount specific settings, and hence
+  ### only needs to be templated once.
+  ### The stack needs to be installed in all regions in aws_local_regions
+  - name: Block for security setup on the subaccounts
+    block:
+      - name: Create CFN template from Ansible template for the security setup on the subaccounts
+        template:
+          src: "cfn-security-for-subaccounts.yml"
+          dest: "generated-files/cfn-{{ organization.name }}-security-for-subaccounts.yml"
+      - name: Assume Role on all accounts
+        sts_assume_role:
+          role_arn: "arn:aws:iam::{{ item }}:role/OrganizationAccountAccessRole"
+          role_session_name: "{{ item }}-OrganizationAccountAccessRole"
+        register: "security_assumed_role_subaccount_single"
+        with_items: "{{ lookup('template', 'all_accounts.txt.j2').split(' ') }}"
+
+      - name: Create/Update Security CloudFormation Stack on all accounts
+        cloudformation:
+          aws_access_key: "{{ item[0].sts_creds.access_key }}"
+          aws_secret_key: "{{ item[0].sts_creds.secret_key }}"
+          security_token: "{{ item[0].sts_creds.session_token }}"
+          region: "{{ item[1] }}"
+          stack_name: "{{ cfn_org_name }}SecuritySubaccount"
+          state: "present"
+          disable_rollback: false
+          template: "generated-files/cfn-{{ organization.name }}-security-for-subaccounts.yml"
+        with_nested:
+          - "{{ security_assumed_role_subaccount_single.results }}"
+          - "{{ aws_local_regions }}"
+    when: security_account is defined
+    tags: [ 'security' ]

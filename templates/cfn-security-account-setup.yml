@@ -49,6 +49,7 @@ Resources:
             Service: cloudtrail.amazonaws.com
           Action: s3:PutObject
           Resource:
+            - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ bastion_account.account_id }}/*
 {% for account in subaccounts %}
             - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ account.account_id }}/*
 {% endfor %}
@@ -68,6 +69,7 @@ Resources:
             Service: config.amazonaws.com
           Action: s3:PutObject
           Resource:
+            - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ bastion_account.account_id }}/*
 {% for account in subaccounts %}
             - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ account.account_id }}/*
 {% endfor %}

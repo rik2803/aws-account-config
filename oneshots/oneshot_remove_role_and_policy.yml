@@ -1,0 +1,93 @@
+---
+- name: Create users in the AWS Bastion Account
+  hosts: localhost
+  gather_facts: false
+
+  pre_tasks:
+    - name: BLock for pre_tasks
+      block:
+      - name: Test AWS_REGION
+        shell: "[[ -n $AWS_REGION ]]"
+        register: region
+        failed_when: false
+        changed_when: false
+      - name: Test AWS_SECRET_ACCESS_KEY
+        shell: "[[ -n $AWS_SECRET_ACCESS_KEY ]]"
+        register: secret
+        failed_when: false
+        changed_when: false
+      - name: Test AWS_ACCESS_KEY_ID
+        shell: "[[ -n $AWS_ACCESS_KEY_ID ]]"
+        register: key
+        failed_when: false
+        changed_when: false
+      - name: Test if config file exists
+        stat:
+          path: "{{ config_file }}"
+        register: configfile
+        failed_when: false
+        changed_when: false
+      - name: Do assertions on configfile and AWS credential envvars
+        assert:
+          that:
+            - "config_file is defined"
+            - "key.rc == 0"
+            - "secret.rc == 0"
+            - "region.rc == 0"
+            - "configfile.stat.exists"
+      - name: Set global facts
+        block:
+          - name: Convert organization name to CamelCase
+            set_fact:
+              cfn_org_name: "{{ organization.name | title }}"
+
+      tags: [ 'always' ]
+
+  vars_files:
+    - "{{ config_file }}"
+  vars:
+    - org: "{{ organization.name | default('Unknown') }}"
+    - subaccount_limit: "{{ subaccount | default('all') }}"
+
+  tasks:
+    - name: Assume role for subaccounts
+      sts_assume_role:
+        role_arn: "arn:aws:iam::{{ item.account_id }}:role/{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
+        role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
+      register: "assumed_role_subaccount_single"
+      with_items:
+        - "{{ subaccounts }}"
+
+
+#    - name: Remove the role global_admin
+#      iam_role:
+#        aws_access_key: "{{ item.sts_creds.access_key }}"
+#        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+#        security_token: "{{ item.sts_creds.session_token }}"
+#        name: global_admin
+#        state: absent
+#      with_items: "{{ assumed_role_subaccount_single.results }}"
+#
+#    - name: Remove the policy ReadOnlyAccessAccessLocal
+#      iam_managed_policy:
+#        aws_access_key: "{{ item.sts_creds.access_key }}"
+#        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+#        security_token: "{{ item.sts_creds.session_token }}"
+#        policy_name: ReadOnlyAccessAccessLocal
+#        state: absent
+#      with_items: "{{ assumed_role_subaccount_single.results }}"
+
+    - name: Remove AWSCloudFormationStackSetExecutionRole from the org account
+      iam_role:
+        name: AWSCloudFormationStackSetAdministrationRolefrom
+        state: absent
+
+    - name: Remove AWSCloudFormationStackSetExecutionRole from all accounts
+      iam_role:
+        aws_access_key: "{{ item.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+        security_token: "{{ item.sts_creds.session_token }}"
+        name: AWSCloudFormationStackSetExecutionRolefrom
+        state: absent
+      with_items: "{{ assumed_role_subaccount_single.results }}"
+

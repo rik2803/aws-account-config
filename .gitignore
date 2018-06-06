@@ -1,4 +1,6 @@
 *retry
 setup*.bash
-*html
+ixor*html
+lemo*html
 .idea
+generated-files/*

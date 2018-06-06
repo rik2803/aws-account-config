@@ -1,0 +1,92 @@
+<html lang="en">
+<head>
+<meta charset="utf-8">
+
+<title>AWS Accounts</title>
+
+<link rel="stylesheet" href="css/styles.css?v=1.0">
+
+</head>
+
+<body>
+<script>
+window.rolemapping = {
+  "AssumePower": "power",
+  "AssumeAdmin": "admin",
+  "AssumeRead": "read",
+  "AssumePowerLocal": "powerlocal",
+  "AssumeAdminLocal": "adminlocal",
+  "AssumeReadLocal": "readlocal"
+}
+window.users = {
+  "aws_users":
+{{ aws_users | to_nice_json }}
+}
+
+window.accounts = {
+  "subaccounts":
+{{subaccounts | to_nice_json }}
+}
+</script>
+<script>
+  var vars = location.href.split('?')[1].split('&').map(str => str.split('=')).reduce(function(prev, v) {return Object.assign(prev, {[v[0]]: v[1]})}, {})
+  var selectedUserName = vars.user
+
+  var selectedUser = users.aws_users.find(
+    function(user) {
+      return user.name === selectedUserName
+    }
+  )
+
+  var groups = selectedUser.groups
+  var parsedGroups = groups.map(
+    function(groupString) {
+      var split = groupString.split('-')
+      return {role: split[0], account: split[1]}
+    }
+  )
+
+  var matchingAccounts = accounts.subaccounts.filter(
+    function(account) {
+      return parsedGroups.some(
+        function(group) {
+          return account.name.indexOf(group.account) !== -1
+        }
+      )
+    }
+  )
+
+  var string = JSON.stringify(matchingAccounts)
+  console.log(string)
+
+  var list = new Set()
+
+  parsedGroups.forEach(
+    function (value) {
+      var role = value.role
+      var account = value.account
+      var remoterole = rolemapping[role]
+
+      console.log(value)
+      console.log(remoterole)
+
+      matchingAccounts.forEach(
+        function (t) {
+          list.add('<a href="https://signin.aws.amazon.com/switchrole?account=' + t.account_id + '&roleName=' + remoterole + '&displayName=' + t.name +'">' + t.name + ' ' + remoterole + '</a><br>')
+        }
+      )
+
+    }
+  )
+
+  document.write('<h2>AWS Cross Account links for ' + vars.user + '</h2><ul>')
+  list.forEach(
+    function(t) {
+      document.write('<li>' + t + '</li>')
+    }
+  )
+  document.write('</ul><br>')
+
+</script>
+</body>
+</html>

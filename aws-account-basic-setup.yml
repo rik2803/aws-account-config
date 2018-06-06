@@ -1,0 +1,344 @@
+---
+    ### Specific Bastion Setup
+    - name: Block for specific Bastion Setup
+      block:
+        - name: Assume Role for bastion account
+          sts_assume_role:
+            role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
+            role_session_name: "security-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
+          register: bastion_assumed_role
+
+      tags: [ 'bastion' ]
+
+    ### The rest of the PB
+    - name: Assume role for bastion/admin
+      sts_assume_role:
+        role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
+        role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
+      register: assumed_role
+      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users' ]
+
+    - name: Create groups in the bastion account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "{{ item[0].name }}-{{ item[1].name }}"
+        state: present
+      with_nested:
+        - "{{ aws_groups }}"
+        - "{{ subaccounts }}"
+      tags: [ 'bastion' ]
+
+    - name: Create billing group in the bastion account for billing access to organization account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "AssumeBilling-{{ organization.name | default('org') }}"
+        state: present
+      tags: [ 'bastion' ]
+
+    - name: Create default groups for the environments in the bastion account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "Assume{{ item[0] }}-{{ item[1] }}"
+        state: present
+      with_nested:
+        - [ 'Admin', 'Power', 'Read', 'AdminLocal', 'PowerLocal', 'ReadLocal' ]
+        - "{{ environments | default([]) }}"
+      tags: [ 'bastion' ]
+
+    - name: Create default groups for the entities in the bastion account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "Assume{{ item[0] }}-{{ item[1] }}"
+        state: present
+      with_nested:
+        - [ 'Admin', 'Power', 'Read', 'AdminLocal', 'PowerLocal', 'ReadLocal' ]
+        - "{{ entities | default([]) }}"
+      tags: [ 'bastion' ]
+
+    - name: Create default groups in the bastion account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - Admin
+        - ManageYourOwnUser
+      tags: [ 'bastion' ]
+
+    - name: Create users in the bastion account
+      iam:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: user
+        name: "{{ item.name }}"
+        state: "{{ item.state | default('present') }}"
+        groups:
+          - ManageYourOwnUser
+        update_password: on_create
+        password: "{{ item.initial_password | default('Change_0n_login') }}"
+      with_items: "{{ aws_users }}"
+      when: aws_users is defined
+      tags: [ 'bastion', 'create_users' ]
+
+    - name: Assign user to groups in the bastion account
+      iam:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: user
+        name: "{{ item.name }}"
+        groups: "{{ item.groups + default_groups }}"
+        state: update
+      with_items: "{{ aws_users }}"
+      when: aws_users is defined
+      tags: [ 'bastion', 'create_users' ]
+
+    ### There might be environments (i.e. tst) that have no associated account, that's OK
+    - name: Create policies for Assume<Role>-<env> and assign to the respective groups
+      iam_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: group
+        iam_name: "Assume{{ item[0] }}-{{ item[1] }}"
+        policy_name: "AssumeRole"
+        policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-environment.json.j2') }}"
+        state: present
+      with_nested:
+        - [ 'Admin', 'Power', 'Read', 'AdminLocal', 'PowerLocal', 'ReadLocal' ]
+        - "{{ environments | default([]) }}"
+      tags: [ 'bastion' ]
+
+    - name: Create policies for Assume<Role>-<organization> and assign to the respective groups
+      iam_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: group
+        iam_name: "Assume{{ item[0] }}-{{ item[1] }}"
+        policy_name: "AssumeRole"
+        policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-entity.json.j2') }}"
+        state: present
+      with_nested:
+        - [ 'Admin', 'Power', 'Read', 'AdminLocal', 'PowerLocal', 'ReadLocal' ]
+        - "{{ entities | default([]) }}"
+      tags: [ 'bastion' ]
+
+    - name: Create policy ManageYourOwnUser in the bastion account and assign it to the group with the same name
+      iam_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: group
+        iam_name: "ManageYourOwnUser"
+        policy_name: "ManageYourOwnUser"
+        policy_json: "{{ lookup('file', 'ManageYourOwnUser.json') }}"
+        state: present
+      tags: [ 'bastion' ]
+
+    - name: Create policy Billing in the bastion account and assign it to the billing group
+      iam_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: group
+        iam_name: "AssumeBilling-{{ organization.name | default('org') }}"
+        policy_name: "AssumeRole"
+        policy_json: "{{ lookup('template', 'bastion-group-policy-billing.json.j2') }}"
+        state: present
+      tags: [ 'bastion' ]
+
+    - name: Assign policies to groups in the bastion account
+      iam_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: group
+        iam_name: "{{ item[0].name }}-{{ item[1].name }}"
+        policy_name: "AssumeRole"
+        policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-one.json.j2') }}"
+        state: present
+      with_nested:
+        - "{{ aws_groups }}"
+        - "{{ subaccounts }}"
+      tags: [ 'bastion_grouppolicy', 'bastion' ]
+    - name: Assign AdministratorAccess policies to the Admin group in the bastion account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "Admin"
+        managed_policy: "AdministratorAccess"
+        state: present
+      tags: [ 'bastion' ]
+
+    - name: Set password policy rules on the bastion account
+      command: >
+        aws iam update-account-password-policy
+            --minimum-password-length "{{ bastion_account.minimum_password_length | default('8') }}"
+            --require-numbers
+            --require-uppercase-characters
+            --require-lowercase-characters
+            --allow-users-to-change-password
+            --max-password-age 90
+            --password-reuse-prevention 3
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ assumed_role.sts_creds.access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ assumed_role.sts_creds.secret_key }}"
+        AWS_SESSION_TOKEN: "{{ assumed_role.sts_creds.session_token }}"
+        AWS_DEFAULT_REGION: "{{ assumed_role.region | default('eu-central-1') }}"
+      tags: [ 'bastion', 'passwordpolicy' ]
+
+    ### Assumes role for setting the password policy on the subaccounts
+    - name: Assume role for subaccounts
+      sts_assume_role:
+        role_arn: "arn:aws:iam::{{ item.account_id }}:role/{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
+        role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
+      register: "assumed_role_subaccount_single"
+      with_items:
+        - "{{ subaccounts }}"
+      when: "bastion_account.account_id != item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.name )"
+      tags: [ 'subaccounts', 'passwordpolicy', 'createroles', 'organization' ]
+
+    - name: Set password policy rules on the sub accounts
+      command: >
+        aws iam update-account-password-policy
+            --minimum-password-length "{{ item.minimum_password_length | default('8') }}"
+            --require-numbers
+            --require-uppercase-characters
+            --require-lowercase-characters
+            --allow-users-to-change-password
+            --max-password-age 90
+            --password-reuse-prevention 3
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
+        AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
+        AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
+      with_items: "{{ assumed_role_subaccount_single.results }}"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
+      tags: [ 'subaccounts', 'passwordpolicy' ]
+
+    ### Create *Local policies
+    - name: Create the AdministratorAccessLocal policy with region restrictions
+      iam_managed_policy:
+        aws_access_key: "{{ item.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+        security_token: "{{ item.sts_creds.session_token }}"
+        policy_name: "AdministratorAccessLocal"
+        policy: "{{ lookup('template', 'AdministratorAccessLocal.json.j2') }}"
+        state: present
+      with_items: "{{ assumed_role_subaccount_single.results }}"
+      tags: [ 'subaccounts', 'createroles', 'organization' ]
+    - name: Create the PowerUserAccessLocal policy with region restrictions
+      iam_managed_policy:
+        aws_access_key: "{{ item.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+        security_token: "{{ item.sts_creds.session_token }}"
+        policy_name: "PowerUserAccessLocal"
+        policy: "{{ lookup('template', 'PowerUserAccessLocal.json.j2') }}"
+        state: present
+      with_items: "{{ assumed_role_subaccount_single.results }}"
+      tags: [ 'subaccounts', 'createroles', 'organization' ]
+    - name: Create the ReadOnlyAccessLocal policy with region restrictions
+      iam_managed_policy:
+        aws_access_key: "{{ item.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+        security_token: "{{ item.sts_creds.session_token }}"
+        policy_name: "ReadOnlyAccessLocal"
+        policy: "{{ lookup('template', 'ReadOnlyAccessLocal.json.j2') }}"
+        state: present
+      with_items: "{{ assumed_role_subaccount_single.results }}"
+      tags: [ 'subaccounts', 'createroles', 'organization' ]
+
+    ### This assumes #aws_roles time a role per account, bacause these will be used in the
+    ### a loop to create all roles on all subaccounts.
+    - name: Assume role for subaccounts
+      sts_assume_role:
+        role_arn: "arn:aws:iam::{{ item[0].account_id }}:role/{{ item[0].sts_role | default('OrganizationAccountAccessRole') }}"
+        role_session_name: "{{ item[0].name }}-{{ item[0].sts_role | default('OrganizationAccountAccessRole') }}"
+      register: "assumed_role_subaccount"
+      with_nested:
+        - "{{ subaccounts }}"
+        - "{{ aws_roles }}"
+      when: "bastion_account.account_id != item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item[0].name )"
+      tags: [ 'subaccounts', 'createroles' ]
+
+    - name: Create roles on subaccounts for trusted access from the bastion account
+      iam_role:
+        aws_access_key: "{{ item.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+        security_token: "{{ item.sts_creds.session_token }}"
+        name: "{{ item.item[1].name }}"
+        assume_role_policy_document: "{{ lookup('template', 'policy-trust-for-bastion.json.j2') }}"
+        managed_policy: "{{ item.item[1].managed_policies }}"
+        state: present
+      #no_log: True
+      with_items: "{{ assumed_role_subaccount.results }}"
+      when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item[0].name )"
+      tags: [ 'subaccounts', 'createroles' ]
+
+
+    ###
+    - name: Set the SDK/CLI session duration for the role
+      command: >
+        aws iam update-role --role-name "{{ item.item[1].name }}" --max-session-duration "{{ item.item[1].max_session_duration | default(3600) }}"
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
+        AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
+        AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
+      with_items: "{{ assumed_role_subaccount.results }}"
+      when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item[0].name )"
+      tags: [ 'subaccounts', 'createroles' ]
+
+    - name: Upload pubkey for the account
+      ec2_key:
+        aws_access_key: "{{ item.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+        security_token: "{{ item.sts_creds.session_token }}"
+        name: "id_rsa_{{ item.item[0].name }}"
+        key_material: "{{ item.item[0].pubkey }}"
+        state: present
+      with_items: "{{ assumed_role_subaccount.results }}"
+      when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item[0].name ) and item.item[0].pubkey is defined"
+      tags: [ 'subaccounts' ]
+
+    ### Role for billing on org account
+    - name: Create billing role on organization account for trusted access from the bastion account
+      iam_role:
+        name: "billing"
+        assume_role_policy_document: "{{ lookup('template', 'policy-trust-for-bastion.json.j2') }}"
+        managed_policy: "Billing"
+        state: present
+      no_log: True
+      tags: [ 'subaccounts', 'createroles', 'billing' ]
+
+
+    ### create html file with cross-account urls
+    - name: create html file
+      template:
+        src: aws-crossaccount-links.j2
+        dest: "~/projects/AWS/aws-account-config/{{ org }}.html"
+      tags: [ 'html' ]
+    - name: create html file
+      template:
+        src: aws-crossaccount-links-table.j2
+        dest: "~/projects/AWS/aws-account-config/{{ org }}-table.html"
+      tags: [ 'html' ]
+    - name: create html file
+      template:
+        src: aws-crossaccount-links-myroles.j2
+        dest: "~/projects/AWS/aws-account-config/{{ org }}-myroles.html"
+      tags: [ 'html' ]
