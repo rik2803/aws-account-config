@@ -5,7 +5,9 @@
       "Effect": "Allow",
       "Action": [
         "s3:*",
-        "iam:*"
+        "iam:*",
+        "cloudfront:*",
+        "route53:*"
       ],
       "Resource": "*"
     },
@@ -13,7 +15,9 @@
       "Effect": "Allow",
       "NotAction": [
         "s3:*",
-        "iam:*"
+        "iam:*",
+        "cloudfront:*",
+        "route53:*"
       ],
       "Resource": "*",
       "Condition": {
