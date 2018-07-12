@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: |
+  Creates resources on the tooling account that have to be present when setting up an environment
+  with the aws-cfn-gen templates.
+
+Resources:
+
+  S3LambdaFunctionStoreUser:
+    Type: AWS::IAM::User
+    DependsOn:
+      - {{ cfn_tooling_name_prefix }}S3LambdaFunctionStoreFullAccessPolicy
+    Properties:
+      UserName: s3-lambda-function-store-user
+      ManagedPolicyArns:
+        - !Sub 'arn:aws:iam::${AWS::AccountId}:policy/{{ cfn_tooling_name_prefix }}S3LambdaFunctionStoreFullAccess'
+
+  KeyS3LambdaFunctionStoreUser:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName:
+        !Ref S3LambdaFunctionStoreUser
+
+  {{ cfn_tooling_name_prefix }}S3LambdaFunctionStore:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketName: "{{ tooling_name_prefix_env }}-s3-lambda-function-store"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+        - NoncurrentVersionExpirationInDays: 60
+          Status: Enabled
+      Tags:
+      - Key: Application
+        Value: "ixortooling"
+      - Key: Environment
+        Value: "prd"
+      - Key: Customer
+        Value: "NA"
+
+  {{ cfn_tooling_name_prefix }}S3LambdaFunctionStoreFullAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: {{ cfn_tooling_name_prefix }}S3LambdaFunctionStoreFullAccess
+      Description: "Managed policy {{ cfn_tooling_name_prefix }}S3LambdaFunctionStoreFullAccess for {{ cfn_tooling_name_prefix }}"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowFullAccessToS3LambdaFunctionStoreFullAccess
+            Effect: Allow
+            Action:
+              - s3:*
+            Resource:
+              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store
+              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store/*
+
+  {{ cfn_tooling_name_prefix }}CrossAccountAccessToS3LambdaFunctionStore:
+    Type: AWS::S3::BucketPolicy
+    DependsOn:
+      - {{ cfn_tooling_name_prefix }}S3LambdaFunctionStore
+    Properties:
+      Bucket: !Ref {{ cfn_tooling_name_prefix }}S3LambdaFunctionStore
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: CrossAccountAccessToS3LambdaFunctionStore
+            Effect: Allow
+            Principal:
+              AWS:
+{% for account in subaccounts %}
+                # Access for account {{ account.name }}
+                - arn:aws:iam::{{ account.account_id }}:root
+{% endfor %}
+            Action:
+              - s3:GetBucketLocation
+              - s3:ListBucket
+              - s3:GetObject
+            Resource:
+              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store
+              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store/*
+
+Outputs:
+  AccessKeyS3LambdaFunctionStoreUserr:
+    Value:
+      !Ref KeyS3LambdaFunctionStoreUser
+  SecretKeyS3LambdaFunctionStoreUser:
+    Value: !GetAtt KeyS3LambdaFunctionStoreUser.SecretAccessKey
