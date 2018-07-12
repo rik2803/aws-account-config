@@ -1,0 +1,97 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  Configure {{ security_account.name }} account
+    - Log bucket for security related files
+    - Bucket policy to allow all accounts to access the bucket
+
+Resources:
+  {{ cfn_org_name }}SecurityLogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketName: "{{ organization.name }}-prd-security-log-bucket"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+        - NoncurrentVersionExpirationInDays: 60
+          Status: Enabled
+      Tags:
+      - Key: Application
+        Value: "{{ organization.name }}security"
+      - Key: Environment
+        Value: "prd"
+      - Key: Customer
+        Value: "shared"
+
+
+  {{ cfn_org_name }}SecurityCrossAccountAccessToS3LogBucket:
+    Type: AWS::S3::BucketPolicy
+    DependsOn:
+      - {{ cfn_org_name }}SecurityLogBucket
+    Properties:
+      Bucket: !Ref {{ cfn_org_name }}SecurityLogBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: AWSCloudTrailAcl
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: s3:GetBucketAcl
+          Resource: arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket
+        - Sid: AWSCloudTrailWrite
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: s3:PutObject
+          Resource:
+            - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ bastion_account.account_id }}/*
+{% for account in subaccounts %}
+            - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ account.account_id }}/*
+{% endfor %}
+          Condition:
+            StringEquals:
+              s3:x-amz-acl: bucket-owner-full-control
+
+        - Sid: AWSConfigAcl
+          Effect: Allow
+          Principal:
+            Service: config.amazonaws.com
+          Action: s3:GetBucketAcl
+          Resource: arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket
+        - Sid: AWSConfigWrite
+          Effect: Allow
+          Principal:
+            Service: config.amazonaws.com
+          Action: s3:PutObject
+          Resource:
+            - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ bastion_account.account_id }}/*
+{% for account in subaccounts %}
+            - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ account.account_id }}/*
+{% endfor %}
+          Condition:
+            StringEquals:
+              s3:x-amz-acl: bucket-owner-full-control
+
+  {{ cfn_org_name }}GuardDutyDetector:
+    Type: "AWS::GuardDuty::Detector"
+    Properties:
+      Enable: true
+
+{% for account in subaccounts %}
+{%   if account.account_id != security_account.account_id %}
+  {{ cfn_org_name }}GDMember{{ account.account_id }}:
+    Type: "AWS::GuardDuty::Member"
+    Properties:
+      Status: "Invited"
+      MemberId: "{{ account.account_id }}"
+      Email: "{{ account.email }}"
+      Message: "You are invited to enable Amazon Guardduty."
+      DetectorId: !Ref {{ cfn_org_name }}GuardDutyDetector
+      DisableEmailNotification: true
+{%  endif %}
+{% endfor %}
