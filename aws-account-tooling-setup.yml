@@ -1,0 +1,26 @@
+---
+  - name: Block for setup on the toolingsubaccounts
+    block:
+      - name: Assume role for tooling subaccount
+        sts_assume_role:
+          role_arn: "arn:aws:iam::{{ tooling_account.account_id }}:role/{{ tooling_account.sts_role | default('OrganizationAccountAccessRole') }}"
+          role_session_name: "{{ tooling_account.name }}-{{ tooling_account.sts_role | default('OrganizationAccountAccessRole') }}"
+        register: "tooling_assumed_role"
+
+      - name: Create CFN template from Ansible template for the setup on the tooling subaccount
+        template:
+          src: "CloudFormationTemplates/cfn-setup-for-tooling-subaccount.yml"
+          dest: "generated-files/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}.yml"
+
+      - name: Create/Update Tooling CloudFormation Stack on tooling accounts
+        cloudformation:
+          aws_access_key: "{{ tooling_assumed_role.sts_creds.access_key }}"
+          aws_secret_key: "{{ tooling_assumed_role.sts_creds.secret_key }}"
+          security_token: "{{ tooling_assumed_role.sts_creds.session_token }}"
+          region: "eu-central-1"
+          stack_name: "{{ cfn_org_name }}ToolingSubaccount"
+          state: "present"
+          disable_rollback: false
+          template: "generated-files/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}.yml"
+
+    when: "tooling_account is defined and tooling_account.account_id is defined"
