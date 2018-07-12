@@ -3,6 +3,14 @@
   "Statement": [
     {
       "Action": [
+        "ssm:Describe*",
+        "ssm:Get*",
+        "ssm:List*"
+      ],
+      "Effect": "Deny",
+      "Resource": "*"
+    },    {
+      "Action": [
         "s3:Get*",
         "s3:List*",
         "s3:Head*"
@@ -10,6 +18,7 @@
       "Effect": "Allow",
       "Resource": "*"
     },
+
     {
       "Action": [
         "acm:Describe*",
