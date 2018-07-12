@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+{% if security_account.account_id != item.item.item.account_id and bastion_account.account_id != item.item.item.account_id %}
+  GuardDutyDetector:
+    Type: "AWS::GuardDuty::Detector"
+    Properties:
+      Enable: true
+{% if item.stdout != '' %}
+  GuardDutyMaster:
+    Type: "AWS::GuardDuty::Master"
+    Properties:
+      DetectorId: !Ref GuardDutyDetector
+      MasterId: "{{ security_account.account_id }}"
+      InvitationId: "{{ item.stdout }}"
+{%   endif %}
+{% endif %}
+
