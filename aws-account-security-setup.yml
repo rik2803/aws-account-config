@@ -12,7 +12,7 @@
         register: security_assumed_role
       - name: Create CFN template from Ansible template for the security account setup
         template:
-          src: "cfn-security-account-setup.yml"
+          src: "CloudFormationTemplates/cfn-security-account-setup.yml"
           dest: "generated-files/cfn-{{ organization.name }}-security-account-setup.yml"
       - name: Create or Update the security account setup Stack
         cloudformation:
@@ -24,7 +24,7 @@
           disable_rollback: false
           template: "generated-files/cfn-{{ organization.name }}-security-account-setup.yml"
     when: security_account is defined
-    tags: [ 'security' ]
+    tags: [ 'security', 'securityaccount' ]
 
   ### This section creates a security CloudFormation Stack on all accounts
   ### The Ansible template does not contain subaccount specific settings, and hence
@@ -32,16 +32,18 @@
   ### The stack needs to be installed in all regions in aws_local_regions
   - name: Block for security setup on the subaccounts
     block:
-      - name: Create CFN template from Ansible template for the security setup on the subaccounts
-        template:
-          src: "cfn-security-for-subaccounts.yml"
-          dest: "generated-files/cfn-{{ organization.name }}-security-for-subaccounts.yml"
       - name: Assume Role on all accounts
         sts_assume_role:
           role_arn: "arn:aws:iam::{{ item }}:role/OrganizationAccountAccessRole"
           role_session_name: "{{ item }}-OrganizationAccountAccessRole"
         register: "security_assumed_role_subaccount_single"
         with_items: "{{ lookup('template', 'all_accounts.txt.j2').split(' ') }}"
+
+      - name: Create CFN template from Ansible template for the security setup on the subaccounts
+        template:
+          src: "CloudFormationTemplates/cfn-security-for-subaccount.yml"
+          dest: "generated-files/cfn-{{ organization.name }}-security-for-subaccount-{{ item.item }}.yml"
+        with_items: "{{ security_assumed_role_subaccount_single.results }}"
 
       - name: Create/Update Security CloudFormation Stack on all accounts
         cloudformation:
@@ -52,9 +54,46 @@
           stack_name: "{{ cfn_org_name }}SecuritySubaccount"
           state: "present"
           disable_rollback: false
-          template: "generated-files/cfn-{{ organization.name }}-security-for-subaccounts.yml"
+          template: "generated-files/cfn-{{ organization.name }}-security-for-subaccount-{{ item[0].item }}.yml"
         with_nested:
           - "{{ security_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
+
     when: security_account is defined
-    tags: [ 'security' ]
+    tags: [ 'security', 'security_subaccount' ]
+
+
+ #### GuardDuty Stack
+  - name: Block for GuardDuty setup on the security account
+    block:
+      - name: Get GuardDuty invitation ID
+        command: >
+          aws guardduty list-invitations --query 'Invitations[*].InvitationId' --output text
+        environment:
+          AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
+          AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
+          AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
+          AWS_DEFAULT_REGION: "{{ item.region | default('eu-central-1') }}"
+        register: "guardduty_invitation_id"
+        with_items: "{{ security_assumed_role_subaccount_single.results }}"
+
+      - name: Create CFN template from Ansible template for the GuardDuty setup on the subaccounts
+        template:
+          src: "CloudFormationTemplates/cfn-guardduty-for-subaccount.yml"
+          dest: "generated-files/cfn-{{ organization.name }}-guardduty-for-subaccount-{{ item.item.item }}.yml"
+        with_items: "{{ guardduty_invitation_id.results }}"
+
+#      - name: Create/Update GuardDuty CloudFormation Stack on all accounts
+#        cloudformation:
+#          aws_access_key: "{{ item.item.sts_creds.access_key }}"
+#          aws_secret_key: "{{ item.item.sts_creds.secret_key }}"
+#          security_token: "{{ item.item.sts_creds.session_token }}"
+#          stack_name: "{{ cfn_org_name }}SecuritySubaccount"
+#          state: "present"
+#          disable_rollback: false
+#          template: "generated-files/cfn-{{ organization.name }}-guardduty-for-subaccount-{{ item.item.item }}.yml"
+#        with_items:
+#          - "{{ guardduty_invitation_id.results }}"
+
+    when: security_account is defined
+    tags: [ 'security', 'security_guardduty' ]

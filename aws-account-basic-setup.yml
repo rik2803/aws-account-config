@@ -240,6 +240,7 @@
         policy: "{{ lookup('template', 'AdministratorAccessLocal.json.j2') }}"
         state: present
       with_items: "{{ assumed_role_subaccount_single.results }}"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
     - name: Create the PowerUserAccessLocal policy with region restrictions
       iam_managed_policy:
@@ -250,6 +251,7 @@
         policy: "{{ lookup('template', 'PowerUserAccessLocal.json.j2') }}"
         state: present
       with_items: "{{ assumed_role_subaccount_single.results }}"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
     - name: Create the ReadOnlyAccessLocal policy with region restrictions
       iam_managed_policy:
@@ -260,6 +262,7 @@
         policy: "{{ lookup('template', 'ReadOnlyAccessLocal.json.j2') }}"
         state: present
       with_items: "{{ assumed_role_subaccount_single.results }}"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
     ### This assumes #aws_roles time a role per account, bacause these will be used in the
