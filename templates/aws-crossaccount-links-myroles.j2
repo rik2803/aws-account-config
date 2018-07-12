@@ -72,7 +72,7 @@ window.accounts = {
 
       matchingAccounts.forEach(
         function (t) {
-          list.add('<a href="https://signin.aws.amazon.com/switchrole?account=' + t.account_id + '&roleName=' + remoterole + '&displayName=' + t.name +'">' + t.name + ' ' + remoterole + '</a><br>')
+          list.add('<a href="https://signin.aws.amazon.com/switchrole?account=' + t.account_id + '&roleName=' + remoterole + '&displayName=' + t.name + '_' + remoterole + '">' + t.name + ' ' + remoterole + '</a><br>')
         }
       )
 
