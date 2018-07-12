@@ -1,0 +1,41 @@
+---
+  - name: Block for monitoring setup on the subaccounts
+    block:
+      - name: Assume role for subaccounts
+        sts_assume_role:
+          role_arn: "arn:aws:iam::{{ item.account_id }}:role/{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
+          role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
+        register: "monitoring_assumed_role_subaccount_single"
+        with_items:
+          - "{{ subaccounts }}"
+
+#      - name: Debug
+#        debug:
+#          var: "monitoring_assumed_role_subaccount_single"
+
+      - name: Create CFN template from Ansible template for the monitoring setup on the subaccounts
+        template:
+          src: "CloudFormationTemplates/cfn-monitoring-for-subaccount.yml"
+          dest: "generated-files/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item.item.account_id }}.yml"
+        with_items: "{{ monitoring_assumed_role_subaccount_single.results }}"
+
+      - name: Create/Update Monitoring CloudFormation Stack on all accounts
+        cloudformation:
+          aws_access_key: "{{ item[0].sts_creds.access_key }}"
+          aws_secret_key: "{{ item[0].sts_creds.secret_key }}"
+          security_token: "{{ item[0].sts_creds.session_token }}"
+          region: "{{ item[1] }}"
+          stack_name: "{{ cfn_org_name }}MonitoringSubaccount"
+          state: "present"
+          disable_rollback: false
+          template: "generated-files/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}.yml"
+        with_nested:
+          - "{{ monitoring_assumed_role_subaccount_single.results }}"
+          - [ 'eu-central-1' ]
+#          - "{{ aws_local_regions }}"
+### TODO: Limit to eu-central-1 because Lambda code on S3 should be in same region
+### as the region where the function is created. Have to setup the S3 bucket in
+### all regions in aws_local_regions and setup S3 replication
+
+    tags: [ 'monitoring', 'monitoring_subaccount' ]
+
