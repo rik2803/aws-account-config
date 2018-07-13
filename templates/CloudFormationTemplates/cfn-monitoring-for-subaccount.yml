@@ -32,7 +32,7 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Effect: Allowx
+          - Effect: Allow
             Action:
               - s3:ListBucket
               - s3:GetObject
