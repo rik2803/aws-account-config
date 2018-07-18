@@ -11,22 +11,26 @@
           register: region
           failed_when: false
           changed_when: false
+          check_mode: no
         - name: Test AWS_SECRET_ACCESS_KEY
           shell: "[[ -n $AWS_SECRET_ACCESS_KEY ]]"
           register: secret
           failed_when: false
           changed_when: false
+          check_mode: no
         - name: Test AWS_ACCESS_KEY_ID
           shell: "[[ -n $AWS_ACCESS_KEY_ID ]]"
           register: key
           failed_when: false
           changed_when: false
+          check_mode: no
         - name: Test if config file exists
           stat:
             path: "{{ config_file }}"
           register: configfile
           failed_when: false
           changed_when: false
+          check_mode: no
         - name: Do assertions on configfile and AWS credential envvars
           assert:
             that:
@@ -40,8 +44,8 @@
             - name: Convert organization name to CamelCase
               set_fact:
                 cfn_org_name: "{{ organization.name | title }}"
-                cfn_tooling_name_prefix: "{{ tooling_account.name | default('NA') | replace('.', ' ') | title | replace(' ', '') }}"
-                tooling_name_prefix_env: "{{ tooling_account.name | default('NA') | replace('.', '') }}-{{ tooling_account.environment | default('prd') }}"
+                cfn_tooling_name_prefix: "{{ tooling_account.name | default('NA') | replace('-', ' ') | replace('.', ' ') | title | replace(' ', '') }}"
+                tooling_name_prefix_env: "{{ tooling_account.name | default('NA') | replace('-', '') | replace('.', '') }}-{{ tooling_account.environment | default('prd') }}"
 
       tags: [ 'always' ]
 

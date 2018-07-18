@@ -33,9 +33,18 @@
           - "{{ monitoring_assumed_role_subaccount_single.results }}"
           - [ 'eu-central-1' ]
 #          - "{{ aws_local_regions }}"
-### TODO: Limit to eu-central-1 because Lambda code on S3 should be in same region
+### TODO: Temporarily limited to eu-central-1 because Lambda code on S3 should be in same region
 ### as the region where the function is created. Have to setup the S3 bucket in
 ### all regions in aws_local_regions and setup S3 replication
+        register: async_monitoringcloudformationstack
+        async: 7200
+        poll: 0
+      - name: Wait for async_monitoringcloudformationstack tasks to finish
+        async_status: jid={{ item.ansible_job_id }}
+        register: async_monitoringcloudformationstack_jobs
+        until: async_monitoringcloudformationstack_jobs.finished
+        retries: 300
+        with_items: "{{ async_monitoringcloudformationstack.results | default([]) }}"
 
     tags: [ 'monitoring', 'monitoring_subaccount' ]
 
