@@ -9,10 +9,6 @@
         with_items:
           - "{{ subaccounts }}"
 
-#      - name: Debug
-#        debug:
-#          var: "monitoring_assumed_role_subaccount_single"
-
       - name: Create CFN template from Ansible template for the monitoring setup on the subaccounts
         template:
           src: "CloudFormationTemplates/cfn-monitoring-for-subaccount.yml"

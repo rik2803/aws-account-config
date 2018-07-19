@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+
+  ### IAM resources required on all accounts, but only in 1 region (eu-central-1) because IAM resources are global
+  S3AccessToLambdaStorePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: "S3AccessToLambdaStorePolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:GetObject
+            Resource:
+              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store
+              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store/*
+
+  CloudWatchAccessForLambdaPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: "CloudWatchAccessForLambdaPolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - cloudwatch:PutMetricData
+              - cloudwatch:GetMetricData
+              - cloudwatch:GetMetricStatistics
+              - cloudwatch:ListMetrics
+            Resource:
+              - "*"
+
+  ListECSClustersAccessForLambdaPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: "ListECSClustersAccessForLambdaPolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - ecs:DescribeClusters
+              - ecs:ListClusters
+            Resource:
+              - "*"
+
+  LambdaBasicExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      RoleName: LambdaBasicExecutionRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Ref S3AccessToLambdaStorePolicy
+
+  LambdaCloudWatchAndECSListExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      RoleName: LambdaCloudWatchAndECSListExecutionRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Ref S3AccessToLambdaStorePolicy
+        - !Ref ListECSClustersAccessForLambdaPolicy
+        - !Ref CloudWatchAccessForLambdaPolicy

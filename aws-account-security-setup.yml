@@ -28,9 +28,6 @@
     tags: [ 'security', 'securityaccount' ]
 
   ### This section creates a security CloudFormation Stack on all accounts
-  ### The Ansible template does not contain subaccount specific settings, and hence
-  ### only needs to be templated once.
-  ### The stack needs to be installed in all regions in aws_local_regions
   - name: Block for security setup on the subaccounts
     block:
       - name: Assume Role on all accounts
@@ -38,32 +35,22 @@
           role_arn: "arn:aws:iam::{{ item }}:role/OrganizationAccountAccessRole"
           role_session_name: "{{ item }}-OrganizationAccountAccessRole"
         register: "security_assumed_role_subaccount_single"
-        async: 7200
-        poll: 0
         with_items: "{{ lookup('template', 'all_accounts.txt.j2').split(' ') }}"
-      - name: Wait for security_assumed_role_subaccount_single tasks to finish
-        async_status: jid={{ item.ansible_job_id }}
-        register: security_assumed_role_subaccount_single_jobs
-        until: security_assumed_role_subaccount_single_jobs.finished
-        retries: 300
-        with_items: "{{ security_assumed_role_subaccount_single.results | default([]) }}"
 
       - name: Create CFN template from Ansible template for the security setup on the subaccounts
         template:
           src: "CloudFormationTemplates/cfn-security-for-subaccount.yml"
           dest: "generated-files/cfn-{{ organization.name }}-security-for-subaccount-{{ item.item }}.yml"
         with_items: "{{ security_assumed_role_subaccount_single.results }}"
-        register: async_createansiblesecuritytemplate
-        async: 7200
-        poll: 0
-      - name: Wait for async_createansiblesecuritytemplate tasks to finish
-        async_status: jid={{ item.ansible_job_id }}
-        register: async_createansiblesecuritytemplate_jobs
-        until: async_createansiblesecuritytemplate_jobs.finished
-        retries: 300
-        with_items: "{{ async_createansiblesecuritytemplate.results | default([]) }}"
 
-      - name: Create/Update Security CloudFormation Stack on all accounts
+      - name: Create CFN template from Ansible template for the IAM security setup on the subaccounts
+        template:
+          src: "CloudFormationTemplates/cfn-security-for-subaccount-iam.yml"
+          dest: "generated-files/cfn-{{ organization.name }}-security-iam-for-subaccount-{{ item.item }}.yml"
+        with_items: "{{ security_assumed_role_subaccount_single.results }}"
+
+      ### Stack for all regions in aws_local_regions
+      - name: Create/Update Security CloudFormation Stack on all accounts in all regions in "{{ aws_local_regions }}"
         cloudformation:
           aws_access_key: "{{ item[0].sts_creds.access_key }}"
           aws_secret_key: "{{ item[0].sts_creds.secret_key }}"
@@ -76,15 +63,41 @@
         with_nested:
           - "{{ security_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
-        register: async_creaatesecuritycloudformationstack
+        register: async_createsecuritycloudformationstack
         async: 7200
         poll: 0
-      - name: Wait for async_creaatesecuritycloudformationstack tasks to finish
+
+      ### Stack for home region (eu-central-1)
+      - name: Create/Update IAM Security CloudFormation Stack on all accounts in all (home) region eu-central-1
+        cloudformation:
+          aws_access_key: "{{ item.sts_creds.access_key }}"
+          aws_secret_key: "{{ item.sts_creds.secret_key }}"
+          security_token: "{{ item.sts_creds.session_token }}"
+          region: eu-central-1
+          stack_name: "{{ cfn_org_name }}SecuritySubaccountIAM"
+          state: "present"
+          disable_rollback: false
+          template: "generated-files/cfn-{{ organization.name }}-security-iam-for-subaccount-{{ item.item }}.yml"
+        with_items:
+          - "{{ security_assumed_role_subaccount_single.results }}"
+        register: async_createsecurityiamcloudformationstack
+        async: 7200
+        poll: 0
+
+      ### Wait
+      - name: Wait for async_createsecuritycloudformationstack tasks to finish
         async_status: jid={{ item.ansible_job_id }}
-        register: async_creaatesecuritycloudformationstack_jobs
-        until: async_creaatesecuritycloudformationstack_jobs.finished
+        register: async_createsecuritycloudformationstack_jobs
+        until: async_createsecuritycloudformationstack_jobs.finished
         retries: 300
-        with_items: "{{ async_creaatesecuritycloudformationstack.results | default([]) }}"
+        with_items: "{{ async_createsecuritycloudformationstack.results | default([]) }}"
+
+      - name: Wait for async_createsecurityiamcloudformationstack tasks to finish
+        async_status: jid={{ item.ansible_job_id }}
+        register: async_createsecurityiamcloudformationstack_jobs
+        until: async_createsecurityiamcloudformationstack_jobs.finished
+        retries: 300
+        with_items: "{{ async_createsecurityiamcloudformationstack.results | default([]) }}"
 
     when: security_account is defined
     tags: [ 'security', 'security_subaccount' ]

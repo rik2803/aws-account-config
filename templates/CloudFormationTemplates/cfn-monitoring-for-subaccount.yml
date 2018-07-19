@@ -25,39 +25,6 @@ Resources:
       ScheduleExpression: "rate(60 minutes)"
       State: "ENABLED"
 
-  S3AccessToLambdaFunctionStorePolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: "S3AccessToLambdaFunctionStorePolicy"
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action:
-              - s3:ListBucket
-              - s3:GetObject
-            Resource:
-              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store
-              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store/*
-      Roles:
-        - !Ref LambdaBasicExecutionRole
-
-  LambdaBasicExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: "/"
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
   MonitoringSNSTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -103,7 +70,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
-      Role: !GetAtt LambdaBasicExecutionRole.Arn
+      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/LambdaBasicExecutionRole"
       Environment:
         Variables:
           WEBHOOKPATH: "{{ chat_webhook.path }}"
@@ -144,14 +111,32 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-ScheduledRule5min"
 
-  ScheduledRule5min:
+  ScheduledRule15min:
     Value: !Ref ScheduledRule15min
     Description: ScheduledRule15min
     Export:
       Name: !Sub "${AWS::StackName}-ScheduledRule15min"
 
-  ScheduledRule5min:
+  ScheduledRule60min:
     Value: !Ref ScheduledRule60min
     Description: ScheduledRule60min
     Export:
       Name: !Sub "${AWS::StackName}-ScheduledRule60min"
+
+  ScheduledRule5minArn:
+    Value: !GetAtt ScheduledRule5min.Arn
+    Description: ScheduledRule5minArn
+    Export:
+      Name: !Sub "${AWS::StackName}-ScheduledRule5minArn"
+
+  ScheduledRule15minArn:
+    Value: !GetAtt ScheduledRule15min.Arn
+    Description: ScheduledRule15minArn
+    Export:
+      Name: !Sub "${AWS::StackName}-ScheduledRule15minArn"
+
+  ScheduledRule60minArn:
+    Value: !GetAtt ScheduledRule60min.Arn
+    Description: ScheduledRule60minArn
+    Export:
+      Name: !Sub "${AWS::StackName}-ScheduledRule60minArn"
