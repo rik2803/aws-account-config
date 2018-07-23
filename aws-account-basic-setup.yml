@@ -316,7 +316,7 @@
         AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
         AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
         AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
-        with_items: "{{ assumed_role_subaccount_single.results }}"
+      with_items: "{{ assumed_role_subaccount_single.results }}"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
       tags: [ 'subaccounts', 'passwordpolicy' ]
 
@@ -402,15 +402,6 @@
         - "{{ subaccounts }}"
         - "{{ aws_roles }}"
       when: "bastion_account.account_id != item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item[0].name )"
-      async: 7200
-      poll: 0
-      tags: [ 'subaccounts', 'createroles' ]
-    - name: Wait for assumed_role_subaccount tasks to finish
-      async_status: jid={{ item.ansible_job_id }}
-      register: assumed_role_subaccount_jobs
-      until: assumed_role_subaccount_jobs.finished
-      retries: 300
-      with_items: "{{ assumed_role_subaccount.results | default([]) }}"
       tags: [ 'subaccounts', 'createroles' ]
 
     - name: Create roles on subaccounts for trusted access from the bastion account
