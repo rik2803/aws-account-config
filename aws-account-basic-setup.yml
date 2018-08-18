@@ -183,6 +183,7 @@
       register: async_createassumeroleenvpolicies_jobs
       until: async_createassumeroleenvpolicies_jobs.finished
       retries: 300
+      failed_when: false
       with_items: "{{ async_createassumeroleenvpolicies.results }}"
       tags: [ 'bastion' ]
 
@@ -486,18 +487,18 @@
 
 
     ### create html file with cross-account urls
-    - name: create html file
-      template:
-        src: aws-crossaccount-links.j2
-        dest: "~/projects/AWS/aws-account-config/{{ org }}.html"
-      tags: [ 'html' ]
-    - name: create html file
-      template:
-        src: aws-crossaccount-links-table.j2
-        dest: "~/projects/AWS/aws-account-config/{{ org }}-table.html"
-      tags: [ 'html' ]
-    - name: create html file
-      template:
-        src: aws-crossaccount-links-myroles.j2
-        dest: "~/projects/AWS/aws-account-config/{{ org }}-myroles.html"
-      tags: [ 'html' ]
+    - name: Create html file with cross-account urls
+      block:
+        - name: create html file
+          template:
+            src: aws-crossaccount-links.j2
+            dest: "~/projects/AWS/aws-account-config/{{ org }}.html"
+        - name: create html file
+          template:
+            src: aws-crossaccount-links-table.j2
+            dest: "~/projects/AWS/aws-account-config/{{ org }}-table.html"
+        - name: create html file
+          template:
+            src: aws-crossaccount-links-myroles.j2
+            dest: "~/projects/AWS/aws-account-config/{{ org }}-myroles.html"
+      tags: [ 'html', 'createusers' ]
