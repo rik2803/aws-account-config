@@ -501,4 +501,15 @@
           template:
             src: aws-crossaccount-links-myroles.j2
             dest: "~/projects/AWS/aws-account-config/{{ org }}-myroles.html"
+        - name: Check if a deploy script exists for the organization
+          stat:
+            path: "{{ org }}-html-deploy.bash"
+          register: deployscript
+          failed_when: false
+          changed_when: false
+          check_mode: no
+        - name: Run the script to deploy the HTML files
+          shell: |
+            bash ./{{ org }}-html-deploy.bash
+          when: "deployscript.stat.exists"
       tags: [ 'html', 'createusers' ]
