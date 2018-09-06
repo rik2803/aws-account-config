@@ -29,8 +29,24 @@ window.accounts = {
 }
 </script>
 <script>
-  var vars = location.href.split('?')[1].split('&').map(str => str.split('=')).reduce(function(prev, v) {return Object.assign(prev, {[v[0]]: v[1]})}, {})
-  var selectedUserName = vars.user
+  var vars
+  var selectedUserName
+
+  document.write('<h2>URL for the Bastion AWS Console</h2>')
+  document.write('<a target="_blank" href="{{ bastion_account.console_url | default('Not configured in organizaton inventory') }}">Bastion Account Console</a><br/>')
+
+  if ( location.href.includes('?') ) {
+    vars = location.href.split('?')[1].split('&').map(str => str.split('=')).reduce(function(prev, v) {return Object.assign(prev, {[v[0]]: v[1]})}, {})
+    selectedUserName = vars.user
+
+    if ( ! selectedUserName ) {
+      document.write('<b>Add query parameter user=yourawsuser to the URL<b>')
+      selectedUser = 'unknown'
+    }
+  } else {
+    document.write('<b>Add query parameter user=yourawsuser to the URL<b>')
+    selectedUserName = 'unknown'
+  }
 
   var selectedUser = users.aws_users.find(
     function(user) {

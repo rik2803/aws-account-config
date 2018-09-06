@@ -2,6 +2,7 @@
 setup*.bash
 ixor*html
 lemo*html
+dstudio*html
 .idea
 generated-files/*
 *-html-deploy.bash

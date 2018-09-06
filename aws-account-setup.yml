@@ -59,13 +59,13 @@
     - name: Import basic account setup tasks
       import_tasks: aws-account-basic-setup.yml
       tags: [ 'basic' ]
-    - name: Import monitoring account setup tasks
-      import_tasks: aws-account-monitoring-setup.yml
-      tags: [ 'monitoring' ]
     - name: Import security setup tasks
       import_tasks: aws-account-security-setup.yml
       tags: [ 'security' ]
       when: security_account is defined
+    - name: Import monitoring account setup tasks
+      import_tasks: aws-account-monitoring-setup.yml
+      tags: [ 'monitoring' ]
     - name: Tooling account setup
       import_tasks: aws-account-tooling-setup.yml
       tags: [ 'tooling' ]
