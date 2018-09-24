@@ -13,7 +13,7 @@
       - name: Create CFN template from Ansible template for the security account setup
         template:
           src: "CloudFormationTemplates/cfn-security-account-setup.yml"
-          dest: "generated-files/cfn-{{ organization.name }}-security-account-setup.yml"
+          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-account-setup.yml"
       - name: Create or Update the security account setup Stack
         cloudformation:
           aws_access_key: "{{ security_assumed_role.sts_creds.access_key }}"
@@ -22,7 +22,7 @@
           stack_name: "{{ cfn_org_name }}Security"
           state: "present"
           disable_rollback: false
-          template: "generated-files/cfn-{{ organization.name }}-security-account-setup.yml"
+          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-account-setup.yml"
 
     when: security_account is defined
     tags: [ 'security', 'securityaccount' ]
@@ -40,13 +40,13 @@
       - name: Create CFN template from Ansible template for the security setup on the subaccounts
         template:
           src: "CloudFormationTemplates/cfn-security-for-subaccount.yml"
-          dest: "generated-files/cfn-{{ organization.name }}-security-for-subaccount-{{ item.item }}.yml"
+          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-for-subaccount-{{ item.item }}.yml"
         with_items: "{{ security_assumed_role_subaccount_single.results }}"
 
       - name: Create CFN template from Ansible template for the IAM security setup on the subaccounts
         template:
           src: "CloudFormationTemplates/cfn-security-for-subaccount-iam.yml"
-          dest: "generated-files/cfn-{{ organization.name }}-security-iam-for-subaccount-{{ item.item }}.yml"
+          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-iam-for-subaccount-{{ item.item }}.yml"
         with_items: "{{ security_assumed_role_subaccount_single.results }}"
 
       ### Stack for all regions in aws_local_regions
@@ -59,7 +59,7 @@
           stack_name: "{{ cfn_org_name }}SecuritySubaccount"
           state: "present"
           disable_rollback: false
-          template: "generated-files/cfn-{{ organization.name }}-security-for-subaccount-{{ item[0].item }}.yml"
+          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-for-subaccount-{{ item[0].item }}.yml"
         with_nested:
           - "{{ security_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
@@ -77,7 +77,7 @@
           stack_name: "{{ cfn_org_name }}SecuritySubaccountIAM"
           state: "present"
           disable_rollback: false
-          template: "generated-files/cfn-{{ organization.name }}-security-iam-for-subaccount-{{ item.item }}.yml"
+          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-iam-for-subaccount-{{ item.item }}.yml"
         with_items:
           - "{{ security_assumed_role_subaccount_single.results }}"
         register: async_createsecurityiamcloudformationstack
@@ -134,7 +134,7 @@
           stack_name: "{{ cfn_org_name }}SecuritySubaccount"
           state: "present"
           disable_rollback: false
-          template: "generated-files/cfn-{{ organization.name }}-guardduty-for-subaccount-{{ item.item.item }}.yml"
+          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-guardduty-for-subaccount-{{ item.item.item }}.yml"
         with_items:
           - "{{ guardduty_invitation_id.results }}"
         register: async_createguarddutycloudformationstack

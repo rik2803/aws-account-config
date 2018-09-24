@@ -12,7 +12,7 @@
       - name: Create CFN template from Ansible template for the monitoring setup on the subaccounts
         template:
           src: "CloudFormationTemplates/cfn-monitoring-for-subaccount.yml"
-          dest: "generated-files/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item.item.account_id }}.yml"
+          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item.item.account_id }}.yml"
         with_items: "{{ monitoring_assumed_role_subaccount_single.results }}"
 
       - name: Create/Update Monitoring CloudFormation Stack on all accounts
@@ -24,7 +24,7 @@
           stack_name: "{{ cfn_org_name }}MonitoringSubaccount"
           state: "present"
           disable_rollback: false
-          template: "generated-files/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}.yml"
+          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}.yml"
         with_nested:
           - "{{ monitoring_assumed_role_subaccount_single.results }}"
           - [ 'eu-central-1' ]

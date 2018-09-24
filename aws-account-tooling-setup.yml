@@ -10,7 +10,7 @@
       - name: Create CFN template from Ansible template for the setup on the tooling subaccount
         template:
           src: "CloudFormationTemplates/cfn-setup-for-tooling-subaccount.yml"
-          dest: "generated-files/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}.yml"
+          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}.yml"
 
       - name: Create/Update Tooling CloudFormation Stack on tooling accounts
         cloudformation:
@@ -21,6 +21,6 @@
           stack_name: "{{ cfn_org_name }}ToolingSubaccount"
           state: "present"
           disable_rollback: false
-          template: "generated-files/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}.yml"
+          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}.yml"
 
     when: "tooling_account is defined and tooling_account.account_id is defined"
