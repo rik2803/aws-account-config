@@ -1,7 +1,8 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 Description: |
-  Configure {{ security_account.name }} account
+  Configure {{ security_account.name }} account. This template should only
+  be deployed on the security account.
     - Log bucket for security related files
     - Bucket policy to allow all accounts to access the bucket
 
