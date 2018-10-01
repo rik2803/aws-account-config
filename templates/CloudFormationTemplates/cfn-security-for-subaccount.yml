@@ -1,5 +1,8 @@
 AWSTemplateFormatVersion: 2010-09-09
 
+Description: |
+  Configure Security
+
 Resources:
 
   ### AWS CloudTrail

@@ -77,22 +77,3 @@ Resources:
           Condition:
             StringEquals:
               s3:x-amz-acl: bucket-owner-full-control
-
-  {{ cfn_org_name }}GuardDutyDetector:
-    Type: "AWS::GuardDuty::Detector"
-    Properties:
-      Enable: true
-
-{% for account in subaccounts %}
-{%   if account.account_id != security_account.account_id %}
-  {{ cfn_org_name }}GDMember{{ account.account_id }}:
-    Type: "AWS::GuardDuty::Member"
-    Properties:
-      Status: "Invited"
-      MemberId: "{{ account.account_id }}"
-      Email: "{{ account.email }}"
-      Message: "You are invited to enable Amazon Guardduty."
-      DetectorId: !Ref {{ cfn_org_name }}GuardDutyDetector
-      DisableEmailNotification: true
-{%  endif %}
-{% endfor %}

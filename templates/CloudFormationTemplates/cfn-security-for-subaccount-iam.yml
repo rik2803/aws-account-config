@@ -64,6 +64,7 @@ Resources:
       RoleName: LambdaBasicExecutionRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
         - !Ref S3AccessToLambdaStorePolicy
 
   LambdaCloudWatchAndECSListExecutionRole:
