@@ -23,17 +23,20 @@ window.users = {
 {{ aws_users | to_nice_json }}
 }
 
+window.bastionAccountId = "{{ bastion_account.account_id }}"
+
 window.accounts = {
   "subaccounts":
 {{subaccounts | to_nice_json }}
 }
 </script>
+
 <script>
   var vars
   var selectedUserName
 
   document.write('<h2>URL for the Bastion AWS Console</h2>')
-  document.write('<a target="_blank" href="{{ bastion_account.console_url | default('Not configured in organizaton inventory') }}">Bastion Account Console</a><br/>')
+  document.write('<a target="_blank" href="https://ixor-bastion.signin.aws.amazon.com/console">Bastion Account Console</a><br/>')
 
   if ( location.href.includes('?') ) {
     vars = location.href.split('?')[1].split('&').map(str => str.split('=')).reduce(function(prev, v) {return Object.assign(prev, {[v[0]]: v[1]})}, {})
@@ -75,7 +78,8 @@ window.accounts = {
   var string = JSON.stringify(matchingAccounts)
   console.log(string)
 
-  var list = new Set()
+  var crossAccountLinkList = new Set()
+  var assumeRoleList = new Set()
 
   parsedGroups.forEach(
     function (value) {
@@ -83,12 +87,13 @@ window.accounts = {
       var account = value.account
       var remoterole = rolemapping[role]
 
-      console.log(value)
-      console.log(remoterole)
+      //console.log(value)
+      //console.log(remoterole)
 
       matchingAccounts.forEach(
         function (t) {
-          list.add('<a href="https://signin.aws.amazon.com/switchrole?account=' + t.account_id + '&roleName=' + remoterole + '&displayName=' + t.name + '_' + remoterole + '">' + t.name + ' ' + remoterole + '</a><br>')
+          crossAccountLinkList.add('<a href="https://signin.aws.amazon.com/switchrole?account=' + t.account_id + '&roleName=' + remoterole + '&displayName=' + t.name + '_' + remoterole + '">' + t.name + ' ' + remoterole + '</a><br>')
+          assumeRoleList.add('&nbsp;&nbsp;&nbsp;&nbsp;"' + t.name + '-' + remoterole + '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "ixor-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' + t.account_id + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUser.name + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' + remoterole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}')
         }
       )
 
@@ -96,12 +101,26 @@ window.accounts = {
   )
 
   document.write('<h2>AWS Cross Account links for ' + vars.user + '</h2><ul>')
-  list.forEach(
+  crossAccountLinkList.forEach(
     function(t) {
       document.write('<li>' + t + '</li>')
     }
   )
   document.write('</ul><br>')
+
+  document.write('<h2>aws-sts-assumerole config file for ' + vars.user + '</h2><br>')
+  document.write('<code>{<br>&nbsp;&nbsp;"assume_roles": {<br>')
+  let assumeRoleArray = Array.from(assumeRoleList)
+  assumeRoleArray.forEach(
+    function(t, index, array) {
+      if ( index === array.length - 1 )
+        document.write(t + '<br>')
+      else {
+        document.write(t + ',<br>')
+      }
+    }
+  )
+  document.write('&nbsp;&nbsp;}<br>}<br></code>')
 
 </script>
 </body>
