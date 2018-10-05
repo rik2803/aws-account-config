@@ -1,5 +1,11 @@
 ---
-    ### Specific Bastion Setup
+    ### Set facts
+    - name: "Create a list of AWS Groups from the aws_groups variable"
+      set_fact:
+        group_names: "{{ aws_groups | map(attribute='name') | list }}"
+      tags: [ 'always' ]
+
+   ### Specific Bastion Setup
     - name: Block for specific Bastion Setup
       block:
         - name: Assume Role for bastion account
@@ -16,7 +22,7 @@
         role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
       register: assumed_role
-      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users' ]
+      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users', 'bastionrik' ]
       check_mode: no
 
     - name: Create groups in the bastion account
@@ -56,10 +62,10 @@
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
         security_token: "{{ assumed_role.sts_creds.session_token }}"
-        name: "Assume{{ item[0] }}-{{ item[1] }}"
+        name: "{{ item[0] }}-{{ item[1] }}"
         state: present
       with_nested:
-        - [ 'Admin', 'Power', 'Read', 'AdminLocal', 'PowerLocal', 'ReadLocal' ]
+        - "{{ group_names }}"
         - "{{ environments | default([]) }}"
       register: async_createdefaultgroups
       async: 7200
@@ -78,10 +84,10 @@
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
         security_token: "{{ assumed_role.sts_creds.session_token }}"
-        name: "Assume{{ item[0] }}-{{ item[1] }}"
+        name: "{{ item[0] }}-{{ item[1] }}"
         state: present
       with_nested:
-        - [ 'Admin', 'Power', 'Read', 'AdminLocal', 'PowerLocal', 'ReadLocal' ]
+        - "{{ group_names }}"
         - "{{ entities | default([]) }}"
       register: async_createentitiesgroups
       async: 7200
@@ -166,18 +172,18 @@
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
         security_token: "{{ assumed_role.sts_creds.session_token }}"
         iam_type: group
-        iam_name: "Assume{{ item[0] }}-{{ item[1] }}"
+        iam_name: "{{ item[0] }}-{{ item[1] }}"
         policy_name: "AssumeRole"
         policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-environment.json.j2') }}"
         state: present
       with_nested:
-        - [ 'Admin', 'Power', 'Read', 'AdminLocal', 'PowerLocal', 'ReadLocal' ]
+        - "{{ group_names }}"
         - "{{ environments | default([]) }}"
       register: async_createassumeroleenvpolicies
       failed_when: false
       async: 7200
       poll: 0
-      tags: [ 'bastion' ]
+      tags: [ 'bastion', 'bastionrik' ]
     - name: Wait for async_createassumeroleenvpolicies tasks to finish
       async_status: jid={{ item.ansible_job_id }}
       register: async_createassumeroleenvpolicies_jobs
@@ -185,7 +191,7 @@
       retries: 300
       failed_when: false
       with_items: "{{ async_createassumeroleenvpolicies.results }}"
-      tags: [ 'bastion' ]
+      tags: [ 'bastion', 'bastionrik' ]
 
 
     - name: Create policies for Assume<Role>-<organization> and assign to the respective groups
@@ -194,24 +200,24 @@
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
         security_token: "{{ assumed_role.sts_creds.session_token }}"
         iam_type: group
-        iam_name: "Assume{{ item[0] }}-{{ item[1] }}"
+        iam_name: "{{ item[0] }}-{{ item[1] }}"
         policy_name: "AssumeRole"
         policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-entity.json.j2') }}"
         state: present
       with_nested:
-        - [ 'Admin', 'Power', 'Read', 'AdminLocal', 'PowerLocal', 'ReadLocal' ]
+        - "{{ group_names }}"
         - "{{ entities | default([]) }}"
       register: async_createassumeroleorgpolicies
       async: 7200
       poll: 0
-      tags: [ 'bastion' ]
+      tags: [ 'bastion', 'bastionrik' ]
     - name: Wait for async_createassumeroleorgpolicies tasks to finish
       async_status: jid={{ item.ansible_job_id }}
       register: async_createassumeroleorgpolicies_jobs
       until: async_createassumeroleorgpolicies_jobs.finished
       retries: 300
       with_items: "{{ async_createassumeroleorgpolicies.results }}"
-      tags: [ 'bastion' ]
+      tags: [ 'bastion', 'bastionrik' ]
 
 
     - name: Create policy ManageYourOwnUser in the bastion account and assign it to the group with the same name
