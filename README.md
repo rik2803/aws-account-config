@@ -133,6 +133,27 @@ Set the IAM password policy on all subaccounts.
 Only create users and assign groups to the users. Sonce users only exist on the _Bastion_
 account, this is the only account involved.
 
+### `basic`
+
+Do not run the `monitoring` and `security` playbooks.
+
+### `security`
+
+Only run the `security` tasks.
+
+### `monitoring`
+
+Only run the `monitoring` tasks.
+
+### `subaccounts`
+
+Only run the playbooks that change stuff on the subaccounts.
+
+### `security_guardduty`
+
+Only run the `guardduty` tasks.
+
+
 ## Available `--extra-vars`
 
 ### `config-file`
