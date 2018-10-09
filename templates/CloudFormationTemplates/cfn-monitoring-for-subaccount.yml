@@ -97,6 +97,18 @@ Resources:
 
 {% endfor %}
 
+  HealthNotification:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Post all health notifications on the Monitoring SNS topic
+      State: "ENABLED"
+      EventPattern:
+        source:
+          - aws.health
+      Targets:
+        - Arn: !Ref MonitoringSNSTopic
+          Id: !Sub "IdHealthNotification${AWS::AccountId}"
+
 Outputs:
 
   MonitoringSNSTopic:
