@@ -62,7 +62,7 @@
         with_items: "{{ lookup('template', 'all_accounts.txt.j2').split(' ') }}"
 
     when: security_account is defined
-    tags: [ 'always' ]
+    tags: [ 'security', 'security_guardduty' ]
 
   ### This section creates a security CloudFormation Stack on all accounts
   - name: Block for security setup on the subaccounts
@@ -181,6 +181,16 @@
 
       - name: Accept the invitation
         shell: |
+          if [[ {{ item.item }} -eq {{ security_account.account_id }} ]]
+          then
+            echo "INFO - Skip security account"
+            exit 0
+          fi
+          if [[ {{ item.item }} -eq {{ bastion_account.account_id }} ]]
+          then
+            echo "INFO - Skip bastion account"
+            exit 0
+          fi
           DETECTOR_ID=$(aws guardduty list-detectors --query 'DetectorIds[*]' --output text)
           [[ -z ${DETECTOR_ID} ]] && { echo "ERROR - No DetectorID - exiting"; exit 1; }
           set -- $(aws guardduty get-master-account --detector-id ${DETECTOR_ID} --output text)
