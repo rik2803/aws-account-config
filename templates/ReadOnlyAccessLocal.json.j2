@@ -9,11 +9,25 @@
       ],
       "Effect": "Deny",
       "Resource": "*"
-    },    {
+    },
+    {
       "Action": [
         "s3:Get*",
         "s3:List*",
         "s3:Head*"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Action": [
+        "route53:Get*",
+        "route53:List*",
+        "route53:Test*",
+        "route53domains:Check*",
+        "route53domains:Get*",
+        "route53domains:List*",
+        "route53domains:View*"
       ],
       "Effect": "Allow",
       "Resource": "*"
