@@ -130,8 +130,8 @@ Set the IAM password policy on all subaccounts.
 
 ### `create_users` 
 
-Only create users and assign groups to the users. Sonce users only exist on the _Bastion_
-account, this is the only account involved.
+Only create users and assign groups to the users. Since users only
+exist on the _Bastion_ account, this is the only account involved.
 
 ### `basic`
 

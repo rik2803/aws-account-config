@@ -16,7 +16,8 @@ window.rolemapping = {
   "AssumeRead": "read",
   "AssumePowerLocal": "powerlocal",
   "AssumeAdminLocal": "adminlocal",
-  "AssumeReadLocal": "readlocal"
+  "AssumeReadLocal": "readlocal",
+  "AssumeS3FullAndReadOnlyLocal": "s3_full_and_ro_local"
 }
 window.users = {
   "aws_users":
@@ -36,7 +37,7 @@ window.accounts = {
   var selectedUserName
 
   document.write('<h2>URL for the Bastion AWS Console</h2>')
-  document.write('<a target="_blank" href="https://ixor-bastion.signin.aws.amazon.com/console">Bastion Account Console</a><br/>')
+  document.write('<a target="_blank" href="https://{{ organization.name }}-bastion.signin.aws.amazon.com/console">Bastion Account Console</a><br/>')
 
   if ( location.href.includes('?') ) {
     vars = location.href.split('?')[1].split('&').map(str => str.split('=')).reduce(function(prev, v) {return Object.assign(prev, {[v[0]]: v[1]})}, {})
@@ -93,7 +94,7 @@ window.accounts = {
       matchingAccounts.forEach(
         function (t) {
           crossAccountLinkList.add('<a href="https://signin.aws.amazon.com/switchrole?account=' + t.account_id + '&roleName=' + remoterole + '&displayName=' + t.name + '_' + remoterole + '">' + t.name + ' ' + remoterole + '</a><br>')
-          assumeRoleList.add('&nbsp;&nbsp;&nbsp;&nbsp;"' + t.name + '-' + remoterole + '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "ixor-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' + t.account_id + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUser.name + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' + remoterole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}')
+          assumeRoleList.add('&nbsp;&nbsp;&nbsp;&nbsp;"' + t.name + '-' + remoterole + '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' + t.account_id + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUser.name + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' + remoterole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}')
         }
       )
 
