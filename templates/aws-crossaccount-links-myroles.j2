@@ -81,6 +81,7 @@ window.accounts = {
 
   var crossAccountLinkList = new Set()
   var assumeRoleList = new Set()
+  var awsConfigRoleList = new Set()
 
   parsedGroups.forEach(
     function (value) {
@@ -95,6 +96,7 @@ window.accounts = {
         function (t) {
           crossAccountLinkList.add('<a href="https://signin.aws.amazon.com/switchrole?account=' + t.account_id + '&roleName=' + remoterole + '&displayName=' + t.name + '_' + remoterole + '">' + t.name + ' ' + remoterole + '</a><br>')
           assumeRoleList.add('&nbsp;&nbsp;&nbsp;&nbsp;"' + t.name + '-' + remoterole + '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' + t.account_id + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUser.name + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' + remoterole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}')
+          awsConfigRoleList.add('[profile ' + t.name + ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' + t.account_id + ':role/' + remoterole + '<br>mfa_serial = arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUser.name + '<br><br>')
         }
       )
 
@@ -122,6 +124,14 @@ window.accounts = {
     }
   )
   document.write('&nbsp;&nbsp;}<br>}<br></code>')
+
+  document.write('<h2>~/.aws/config for ' + vars.user + '</h2><br><code>')
+  let awsConfigRoleArray = Array.from(awsConfigRoleList)
+  awsConfigRoleArray.forEach(
+  function(t, index, array) {
+    document.write(t)
+  })
+  document.write('</code>')
 
 </script>
 </body>
