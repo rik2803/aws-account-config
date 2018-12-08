@@ -497,15 +497,15 @@
       block:
         - name: create html file
           template:
-            src: aws-crossaccount-links.j2
+            src: aws-crossaccount-links.html
             dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config') }}/{{ org }}.html"
         - name: create html file
           template:
-            src: aws-crossaccount-links-table.j2
+            src: aws-crossaccount-links-table.html
             dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config') }}/{{ org }}-table.html"
         - name: create html file
           template:
-            src: aws-crossaccount-links-myroles.j2
+            src: aws-crossaccount-links-myroles.html
             dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config') }}/{{ org }}-myroles.html"
         - name: Check if a deploy script exists for the organization
           stat:
