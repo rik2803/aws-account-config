@@ -85,7 +85,7 @@ window.accounts = {
       var parsedGroups = groups.map(
           function (groupString) {
               var split = groupString.split('-')
-              return {role: split[0], account: split[1]}
+              return {role: split[0], account: split.slice(1).join('-')}
           }
       )
 
