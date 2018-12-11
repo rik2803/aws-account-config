@@ -25,6 +25,7 @@ window.rolemapping = {
   "AssumePowerLocal": "powerlocal",
   "AssumeAdminLocal": "adminlocal",
   "AssumeReadLocal": "readlocal",
+  "AssumeBilling": "billing",
   "AssumeS3FullAndReadOnlyLocal": "s3_full_and_ro_local"
 }
 window.users = {
@@ -81,9 +82,6 @@ window.accounts = {
           var account_id = value.account_id
           var remoterole = selectedRole
 
-          //console.log(value)
-          //console.log(remoterole)
-
           crossAccountLinkList.add('<a href="https://signin.aws.amazon.com/switchrole?account=' + account_id + '&roleName=' + remoterole + '&displayName=' + account + '_' + remoterole + '">' + account + ' ' + remoterole + '</a><br>')
           assumeRoleList.add('&nbsp;&nbsp;&nbsp;&nbsp;"' + account + '-' + remoterole + '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' + account_id + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUserName + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' + remoterole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}')
           awsConfigRoleList.add('[profile ' + account + ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' + account_id + ':role/' + remoterole + '<br>mfa_serial = arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUserName + '<br>region = ' + selectedRegion + '<br><br>')
@@ -97,60 +95,82 @@ window.accounts = {
           }
       )
 
-      var matchingAccounts = accounts.subaccounts.filter(
+      var matchingAccounts1 = accounts.subaccounts.map(
           function (account) {
-              return parsedGroups.some(
+              var matchingGroup = parsedGroups.find(
                   function (group) {
-                      return account.name.indexOf(group.account) !== -1
+                      if ( account.name.indexOf(group.account) !== -1 ) {
+                          return group
+                      } else {
+                          return null
+                      }
                   }
               )
+              if (!matchingGroup) return null
+              return {
+                  ...account,
+                  role: matchingGroup.role, //?
           }
-      )
+          }
+      ).filter(function(account) { return !!account })
+
+      var matchingAccounts2 = accounts.subaccounts.map(
+          function (account) {
+              var matchingGroup = parsedGroups.find(
+                  function (group) {
+                      if ( account.environment === group.account ) {
+                          return group
+                      } else {
+                          return null
+                      }
+                  }
+              )
+              if (!matchingGroup) return null
+              return {
+                  ...account,
+                  role: matchingGroup.role, //?
+          }
+          }
+      ).filter(function(account) { return !!account })
+
+      var matchingAccounts = matchingAccounts1.concat(matchingAccounts2)
+      console.log(matchingAccounts)
 
       var string = JSON.stringify(matchingAccounts)
       console.log(string)
 
-      parsedGroups.forEach(
-          function (value) {
-              var role = value.role
-              var account = value.account
+      matchingAccounts.forEach(
+          function (t) {
+              var role = t.role
               var remoterole = rolemapping[role]
 
-              //console.log(value)
-              //console.log(remoterole)
-
-              matchingAccounts.forEach(
-                  function (t) {
-                      crossAccountLinkList.add(
-                          '<a href="https://signin.aws.amazon.com/switchrole?account=' +
-                          t.account_id + '&roleName=' +
-                          remoterole + '&displayName=' +
-                          t.name + '_' + remoterole + '">' +
-                          t.name + ' ' + remoterole + '</a><br>'
-                      )
-                      assumeRoleList.add(
-                          '&nbsp;&nbsp;&nbsp;&nbsp;"' +
-                          t.name + '-' + remoterole +
-                          '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' +
-                          t.account_id +
-                          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' +
-                          bastionAccountId + ':mfa/' + selectedUser.name +
-                          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' +
-                          remoterole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}'
-                      )
-                      awsConfigRoleList.add(
-                          '[profile ' +
-                          t.name + '-' +
-                          remoterole +
-                          ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' +
-                          t.account_id + ':role/' + remoterole +
-                          '<br>mfa_serial = arn:aws:iam::' +
-                          bastionAccountId + ':mfa/' + selectedUser.name +
-                          '<br>region = ' + selectedRegion + '<br><br>'
-                      )
-                  }
+              crossAccountLinkList.add(
+                  '<a href="https://signin.aws.amazon.com/switchrole?account=' +
+                  t.account_id + '&roleName=' +
+                  remoterole + '&displayName=' +
+                  t.name + '_' + remoterole + '">' +
+                  t.name + ' ' + remoterole + '</a><br>'
               )
-
+              assumeRoleList.add(
+                  '&nbsp;&nbsp;&nbsp;&nbsp;"' +
+                  t.name + '-' + remoterole +
+                  '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "lemo-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' +
+                  t.account_id +
+                  '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' +
+                  bastionAccountId + ':mfa/' + selectedUser.name +
+                  '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' +
+                  remoterole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}'
+              )
+              awsConfigRoleList.add(
+                  '[profile ' +
+                  t.name + '-' +
+                  remoterole +
+                  ']<br>source_profile = lemo-bastion<br>role_arn = arn:aws:iam::' +
+                  t.account_id + ':role/' + remoterole +
+                  '<br>mfa_serial = arn:aws:iam::' +
+                  bastionAccountId + ':mfa/' + selectedUser.name +
+                  '<br>region = ' + selectedRegion + '<br><br>'
+              )
           }
       )
   }
