@@ -172,12 +172,12 @@
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
         security_token: "{{ assumed_role.sts_creds.session_token }}"
         iam_type: group
-        iam_name: "{{ item[0] }}-{{ item[1] }}"
+        iam_name: "{{ item[0].name }}-{{ item[1] }}"
         policy_name: "AssumeRole"
         policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-environment.json.j2') }}"
         state: present
       with_nested:
-        - "{{ group_names }}"
+        - "{{ aws_groups }}"
         - "{{ environments | default([]) }}"
       register: async_createassumeroleenvpolicies
       failed_when: false
@@ -200,12 +200,12 @@
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
         security_token: "{{ assumed_role.sts_creds.session_token }}"
         iam_type: group
-        iam_name: "{{ item[0] }}-{{ item[1] }}"
+        iam_name: "{{ item[0].name }}-{{ item[1] }}"
         policy_name: "AssumeRole"
         policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-entity.json.j2') }}"
         state: present
       with_nested:
-        - "{{ group_names }}"
+        - "{{ aws_groups }}"
         - "{{ entities | default([]) }}"
       register: async_createassumeroleorgpolicies
       async: 7200

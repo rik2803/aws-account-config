@@ -1,0 +1,13 @@
+---
+- name: Test set_fact
+  hosts: localhost
+  gather_facts: false
+
+  vars_files:
+    - "../aws-account-config-ixor/aws-account-config.yml"
+
+  tasks:
+    - set_fact:
+        group_names: "{{ aws_groups | map(attribute='name') | list }}"
+    - debug:
+        var: group_names
