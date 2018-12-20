@@ -62,7 +62,7 @@
         with_items: "{{ lookup('template', 'all_accounts.txt.j2').split(' ') }}"
 
     when: security_account is defined
-    tags: [ 'security', 'security_guardduty' ]
+    tags: [ 'security', 'security_guardduty', 'security_subaccount' ]
 
   ### This section creates a security CloudFormation Stack on all accounts
   - name: Block for security setup on the subaccounts
