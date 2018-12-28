@@ -5,6 +5,14 @@ Description: |
 
 Resources:
 
+{% if item == 'eu-central-1' %}
+{%   set bucket_name = tooling_name_prefix_env + "-s3-lambda-function-store" %}
+{% else %}
+{%   set bucket_name = tooling_name_prefix_env + "-s3-lambda-function-store-" + item %}
+{% endif %}
+
+{# Create global resources only once #}
+{% if item == 'eu-central-1' %}
   S3LambdaFunctionStoreUser:
     Type: AWS::IAM::User
     DependsOn:
@@ -19,12 +27,13 @@ Resources:
     Properties:
       UserName:
         !Ref S3LambdaFunctionStoreUser
+{% endif %}
 
   {{ cfn_tooling_name_prefix }}S3LambdaFunctionStore:
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: Private
-      BucketName: "{{ tooling_name_prefix_env }}-s3-lambda-function-store"
+      BucketName: "{{ bucket_name }}"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
         - ServerSideEncryptionByDefault:
@@ -41,6 +50,8 @@ Resources:
       - Key: Customer
         Value: "NA"
 
+{# Create global resources only once #}
+{% if item == 'eu-central-1' %}
   {{ cfn_tooling_name_prefix }}S3LambdaFunctionStoreFullAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -54,8 +65,16 @@ Resources:
             Action:
               - s3:*
             Resource:
-              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store
-              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store/*
+{%   for region in aws_local_regions %}
+{%     if region == 'eu-central-1' %}
+              - arn:aws:s3:::{{ bucket_name }}
+              - arn:aws:s3:::{{ bucket_name }}/*
+{%     else %}
+              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}
+              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}/*
+{%     endif %}
+{%   endfor %}
+{% endif %}
 
   {{ cfn_tooling_name_prefix }}CrossAccountAccessToS3LambdaFunctionStore:
     Type: AWS::S3::BucketPolicy
@@ -79,12 +98,14 @@ Resources:
               - s3:ListBucket
               - s3:GetObject
             Resource:
-              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store
-              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store/*
+              - arn:aws:s3:::{{ bucket_name }}
+              - arn:aws:s3:::{{ bucket_name }}/*
 
+{% if item == 'eu-central-1' %}
 Outputs:
   AccessKeyS3LambdaFunctionStoreUserr:
     Value:
       !Ref KeyS3LambdaFunctionStoreUser
   SecretKeyS3LambdaFunctionStoreUser:
     Value: !GetAtt KeyS3LambdaFunctionStoreUser.SecretAccessKey
+{% endif %}

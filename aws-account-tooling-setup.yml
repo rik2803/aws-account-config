@@ -10,17 +10,19 @@
       - name: Create CFN template from Ansible template for the setup on the tooling subaccount
         template:
           src: "CloudFormationTemplates/cfn-setup-for-tooling-subaccount.yml"
-          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}.yml"
+          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}-{{ item }}.yml"
+        with_items: "{{ aws_local_regions }}"
 
       - name: Create/Update Tooling CloudFormation Stack on tooling accounts
         cloudformation:
           aws_access_key: "{{ tooling_assumed_role.sts_creds.access_key }}"
           aws_secret_key: "{{ tooling_assumed_role.sts_creds.secret_key }}"
           security_token: "{{ tooling_assumed_role.sts_creds.session_token }}"
-          region: "eu-central-1"
+          region: "{{ item }}"
           stack_name: "{{ cfn_org_name }}ToolingSubaccount"
           state: "present"
           disable_rollback: false
-          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}.yml"
+          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}-{{ item }}.yml"
+        with_items: "{{ aws_local_regions }}"
 
     when: "tooling_account is defined and tooling_account.account_id is defined"
