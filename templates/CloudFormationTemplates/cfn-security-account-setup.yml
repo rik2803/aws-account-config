@@ -28,6 +28,28 @@ Resources:
       - Key: Customer
         Value: "shared"
 
+  {{ cfn_org_name }}GuardDutyListsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketName: "{{ organization.name }}-prd-guardduty-lists-bucket"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - NoncurrentVersionExpirationInDays: 60
+            Status: Enabled
+      Tags:
+        - Key: Application
+          Value: "{{ organization.name }}security"
+        - Key: Environment
+          Value: "prd"
+        - Key: Customer
+          Value: "shared"
+        - Key: Description
+          Value: "Hold whitelist and blacklist files to be used by GuardDuty"
 
   {{ cfn_org_name }}SecurityCrossAccountAccessToS3LogBucket:
     Type: AWS::S3::BucketPolicy
