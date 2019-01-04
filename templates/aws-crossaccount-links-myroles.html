@@ -76,7 +76,7 @@ window.accounts = {
   )
 
   if ( selectedRole == 'admin') {
-      accounts.subaccounts.forEach(
+      accounts.subaccounts.sort( (a, b) => a.name > b.name ).forEach(
       function (value) {
           var account = value.name
           var account_id = value.account_id
@@ -139,7 +139,7 @@ window.accounts = {
       var string = JSON.stringify(matchingAccounts)
       console.log(string)
 
-      matchingAccounts.forEach(
+      matchingAccounts.sort( (a, b) => a.name> b.name ).forEach(
           function (t) {
               var role = t.role
               var remoterole = rolemapping[role]
