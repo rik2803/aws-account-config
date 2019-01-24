@@ -154,7 +154,7 @@ window.accounts = {
               assumeRoleList.add(
                   '&nbsp;&nbsp;&nbsp;&nbsp;"' +
                   t.name + '-' + remoterole +
-                  '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "lemo-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' +
+                  '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' +
                   t.account_id +
                   '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' +
                   bastionAccountId + ':mfa/' + selectedUser.name +
@@ -165,7 +165,7 @@ window.accounts = {
                   '[profile ' +
                   t.name + '-' +
                   remoterole +
-                  ']<br>source_profile = lemo-bastion<br>role_arn = arn:aws:iam::' +
+                  ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' +
                   t.account_id + ':role/' + remoterole +
                   '<br>mfa_serial = arn:aws:iam::' +
                   bastionAccountId + ':mfa/' + selectedUser.name +
