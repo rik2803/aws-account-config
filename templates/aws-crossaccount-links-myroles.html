@@ -198,6 +198,9 @@ window.accounts = {
   document.write('&nbsp;&nbsp;}<br>}<br></code>')
 
   document.write('<h2>~/.aws/config for ' + vars.user + '</h2><br><code>')
+  document.write('[profile {{ organization.name }}-bastion]<br/>')
+  document.write('region = eu-central-1<br/>')
+  document.write('<br/>')
   let awsConfigRoleArray = Array.from(awsConfigRoleList)
   awsConfigRoleArray.forEach(
       function (t, index, array) {
