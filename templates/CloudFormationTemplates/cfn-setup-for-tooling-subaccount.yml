@@ -103,7 +103,7 @@ Resources:
 
 {% if item == 'eu-central-1' %}
 Outputs:
-  AccessKeyS3LambdaFunctionStoreUserr:
+  AccessKeyS3LambdaFunctionStoreUser:
     Value:
       !Ref KeyS3LambdaFunctionStoreUser
   SecretKeyS3LambdaFunctionStoreUser:
