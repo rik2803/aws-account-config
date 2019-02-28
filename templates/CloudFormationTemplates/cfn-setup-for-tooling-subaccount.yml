@@ -36,12 +36,12 @@ Resources:
       BucketName: "{{ bucket_name }}"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
-        - ServerSideEncryptionByDefault:
-            SSEAlgorithm: AES256
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
       LifecycleConfiguration:
         Rules:
-        - NoncurrentVersionExpirationInDays: 60
-          Status: Enabled
+          - NoncurrentVersionExpirationInDays: 60
+            Status: Enabled
       Tags:
       - Key: Application
         Value: "ixortooling"
@@ -49,6 +49,27 @@ Resources:
         Value: "prd"
       - Key: Customer
         Value: "NA"
+
+  {{ cfn_tooling_name_prefix }}S3PublicLambdaFunctionStore:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      BucketName: "{{ bucket_name }}-public"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - NoncurrentVersionExpirationInDays: 60
+            Status: Enabled
+      Tags:
+        - Key: Application
+          Value: "ixortooling"
+        - Key: Environment
+          Value: "prd"
+        - Key: Customer
+          Value: "NA"
 
 {# Create global resources only once #}
 {% if item == 'eu-central-1' %}
@@ -69,9 +90,13 @@ Resources:
 {%     if region == 'eu-central-1' %}
               - arn:aws:s3:::{{ bucket_name }}
               - arn:aws:s3:::{{ bucket_name }}/*
+              - arn:aws:s3:::{{ bucket_name }}-public
+              - arn:aws:s3:::{{ bucket_name }}-public/*
 {%     else %}
               - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}
               - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}/*
+              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}-public
+              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}-public/*
 {%     endif %}
 {%   endfor %}
 {% endif %}
