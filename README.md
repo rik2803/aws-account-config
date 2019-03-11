@@ -1,5 +1,7 @@
 # Ansible playbook to configure your accounts
 
+[toc]
+
 ## Requirements
 
 * _Ansible_ >= 2.4
