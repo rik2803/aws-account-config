@@ -1,5 +1,5 @@
 ---
-  - name: Block for setup on the toolingsubaccounts
+  - name: Block for setup on the toolingsubaccount
     block:
       - name: Assume role for tooling subaccount
         sts_assume_role:
