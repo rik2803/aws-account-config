@@ -349,6 +349,7 @@
       until: async_AdministratorAccessLocal_jobs.finished
       retries: 300
       with_items: "{{ async_AdministratorAccessLocal.results | default([]) }}"
+      when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
 
@@ -372,6 +373,7 @@
       until: async_PowerUserAccessLocal_jobs.finished
       retries: 300
       with_items: "{{ async_PowerUserAccessLocal.results | default([]) }}"
+      when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
 
@@ -395,6 +397,7 @@
       until: async_ReadOnlyAccessLocal_jobs.finished
       retries: 300
       with_items: "{{ async_ReadOnlyAccessLocal.results | default([]) }}"
+      when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
 
@@ -433,6 +436,7 @@
       until: async_createroletrustedaccess_jobs.finished
       retries: 300
       with_items: "{{ async_createroletrustedaccess.results | default([]) }}"
+      when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles' ]
 
 
@@ -457,6 +461,7 @@
       until: async_setsessionduration_jobs.finished
       retries: 300
       with_items: "{{ async_setsessionduration.results | default([]) }}"
+      when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles' ]
 
     - name: Upload pubkey for the account
@@ -479,9 +484,10 @@
       until: async_uploadaccountpubkey_jobs.finished
       retries: 300
       with_items: "{{ async_uploadaccountpubkey.results | default([]) }}"
+      when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts' ]
 
-    ### Role for billing on org account
+    ### Role for billing on organization account
     - name: Create billing role on organization account for trusted access from the bastion account
       iam_role:
         name: "billing"
