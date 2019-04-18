@@ -27,29 +27,29 @@
     when: security_account is defined
     tags: [ 'security', 'securityaccount' ]
 
-  - name: Block for guardduty setup on the security account
-    block:
-      - name: Assume role for security/admin
-        sts_assume_role:
-          role_arn: "arn:aws:iam::{{ security_account.account_id }}:role/{{ security_account.sts_role | default('OrganizationAccountAccessRole') }}"
-          role_session_name: "security-{{ security_account.name }}-{{ security_account.sts_role | default('OrganizationAccountAccessRole') }}"
-        register: security_assumed_role
-      - name: Create CFN template from Ansible template for the GuardDuty setup on the security account
-        template:
-          src: "CloudFormationTemplates/cfn-security-account-guardduty-setup.yml"
-          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-account-guardduty-setup.yml"
-      - name: Create or Update the guardduty security account setup Stack
-        cloudformation:
-          aws_access_key: "{{ security_assumed_role.sts_creds.access_key }}"
-          aws_secret_key: "{{ security_assumed_role.sts_creds.secret_key }}"
-          security_token: "{{ security_assumed_role.sts_creds.session_token }}"
-          stack_name: "{{ cfn_org_name }}GuardDuty"
-          state: "present"
-          disable_rollback: false
-          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-account-guardduty-setup.yml"
-
-    when: security_account is defined
-    tags: [ 'security', 'security_guardduty' ]
+#  - name: Block for guardduty setup on the security account
+#    block:
+#      - name: Assume role for security/admin
+#        sts_assume_role:
+#          role_arn: "arn:aws:iam::{{ security_account.account_id }}:role/{{ security_account.sts_role | default('OrganizationAccountAccessRole') }}"
+#          role_session_name: "security-{{ security_account.name }}-{{ security_account.sts_role | default('OrganizationAccountAccessRole') }}"
+#        register: security_assumed_role
+#      - name: Create CFN template from Ansible template for the GuardDuty setup on the security account
+#        template:
+#          src: "CloudFormationTemplates/cfn-security-account-guardduty-setup.yml"
+#          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-account-guardduty-setup.yml"
+#      - name: Create or Update the guardduty security account setup Stack
+#        cloudformation:
+#          aws_access_key: "{{ security_assumed_role.sts_creds.access_key }}"
+#          aws_secret_key: "{{ security_assumed_role.sts_creds.secret_key }}"
+#          security_token: "{{ security_assumed_role.sts_creds.session_token }}"
+#          stack_name: "{{ cfn_org_name }}GuardDuty"
+#          state: "present"
+#          disable_rollback: false
+#          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-account-guardduty-setup.yml"
+#
+#    when: security_account is defined
+#    tags: [ 'security', 'security_guardduty' ]
 
   ### Create CFN templates from AWS templates
   - name: Set-up credentials
@@ -133,83 +133,82 @@
     tags: [ 'security', 'security_subaccount' ]
 
 
- #### GuardDuty Stack
- ## - name: Determine the GuardDuty DetectorId for the security account, required to get member status
-  - name: Block for GuardDuty setup on the security account
-    block:
-      - name: Get GuardDuty invitation ID
-        command: >
-          aws guardduty list-invitations --query 'Invitations[*].InvitationId' --output text
-        environment:
-          AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
-          AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
-          AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
-          AWS_DEFAULT_REGION: "{{ item.region | default('eu-central-1') }}"
-        register: "guardduty_invitation_id"
-        with_items: "{{ security_assumed_role_subaccount_single.results }}"
-        async: 7200
-        poll: 0
-      - name: Wait for guardduty_invitation_id tasks to finish
-        async_status: jid={{ item.ansible_job_id }}
-        register: guardduty_invitation_id_jobs
-        until: guardduty_invitation_id_jobs.finished
-        retries: 300
-        with_items: "{{ guardduty_invitation_id.results | default([]) }}"
-
-#      - debug:
-#          var: "guardduty_invitation_id_jobs"
-
-      - name: Create CFN template from Ansible template for the GuardDuty setup on the subaccounts
-        template:
-          src: "CloudFormationTemplates/cfn-guardduty-for-subaccount.yml"
-          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-guardduty-for-subaccount-{{ item.item.item.item }}.yml"
-        with_items: "{{ guardduty_invitation_id_jobs.results }}"
-
-
-      - name: Create/Update GuardDuty CloudFormation Stack on all accounts
-        cloudformation:
-          aws_access_key: "{{ item.item.item.sts_creds.access_key }}"
-          aws_secret_key: "{{ item.item.item.sts_creds.secret_key }}"
-          security_token: "{{ item.item.item.sts_creds.session_token }}"
-          stack_name: "{{ cfn_org_name }}GuarddutySubaccount"
-          state: "present"
-          disable_rollback: false
-          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-guardduty-for-subaccount-{{ item.item.item.item }}.yml"
-        when: "item.item.item.item != security_account.account_id"
-        with_items:
-          - "{{ guardduty_invitation_id_jobs.results }}"
-
-      - name: Accept the invitation
-        shell: |
-          if [[ {{ item.item }} -eq {{ security_account.account_id }} ]]
-          then
-            echo "INFO - Skip security account"
-            exit 0
-          fi
-          if [[ {{ item.item }} -eq {{ bastion_account.account_id }} ]]
-          then
-            echo "INFO - Skip bastion account"
-            exit 0
-          fi
-          DETECTOR_ID=$(aws guardduty list-detectors --query 'DetectorIds[*]' --output text)
-          [[ -z ${DETECTOR_ID} ]] && { echo "ERROR - No DetectorID - exiting"; exit 1; }
-          set -- $(aws guardduty get-master-account --detector-id ${DETECTOR_ID} --output text)
-          if [[ ${5} == "Enabled" ]]
-          then
-            echo "INFO - Relationship is enabled"
-            exit 0
-          else
-            INVITATION_ID=$(aws guardduty list-invitations --query 'Invitations[*].InvitationId' --output text)
-            [[ -z ${INVITATION_ID} ]] && { echo "ERROR - No InvitationID - exiting"; exit 1; }
-            aws guardduty accept-invitation --detector-id ${DETECTOR_ID} --invitation-id ${INVITATION_ID} --master-id {{ security_account.account_id }}
-          fi
-        environment:
-          AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
-          AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
-          AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
-          AWS_DEFAULT_REGION: "{{ item.region | default('eu-central-1') }}"
-        with_items: "{{ security_assumed_role_subaccount_single.results }}"
-
-    # TODO: Remove the false condition when this is ready
-    when: "security_account is defined"
-    tags: [ 'security', 'security_guardduty' ]
+# #### GuardDuty Stack
+# ## - name: Determine the GuardDuty DetectorId for the security account, required to get member status
+#  - name: Block for GuardDuty setup on the security account
+#    block:
+#      - name: Get GuardDuty invitation ID
+#        command: >
+#          aws guardduty list-invitations --query 'Invitations[*].InvitationId' --output text
+#        environment:
+#          AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
+#          AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
+#          AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
+#          AWS_DEFAULT_REGION: "{{ item.region | default('eu-central-1') }}"
+#        register: "guardduty_invitation_id"
+#        with_items: "{{ security_assumed_role_subaccount_single.results }}"
+#        async: 7200
+#        poll: 0
+#      - name: Wait for guardduty_invitation_id tasks to finish
+#        async_status: jid={{ item.ansible_job_id }}
+#        register: guardduty_invitation_id_jobs
+#        until: guardduty_invitation_id_jobs.finished
+#        retries: 300
+#        with_items: "{{ guardduty_invitation_id.results | default([]) }}"
+#
+##      - debug:
+##          var: "guardduty_invitation_id_jobs"
+#
+#      - name: Create CFN template from Ansible template for the GuardDuty setup on the subaccounts
+#        template:
+#          src: "CloudFormationTemplates/cfn-guardduty-for-subaccount.yml"
+#          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-guardduty-for-subaccount-{{ item.item.item.item }}.yml"
+#        with_items: "{{ guardduty_invitation_id_jobs.results }}"
+#
+#      - name: Create/Update GuardDuty CloudFormation Stack on all accounts
+#        cloudformation:
+#          aws_access_key: "{{ item.item.item.sts_creds.access_key }}"
+#          aws_secret_key: "{{ item.item.item.sts_creds.secret_key }}"
+#          security_token: "{{ item.item.item.sts_creds.session_token }}"
+#          stack_name: "{{ cfn_org_name }}GuarddutySubaccount"
+#          state: "present"
+#          disable_rollback: false
+#          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-guardduty-for-subaccount-{{ item.item.item.item }}.yml"
+#        when: "item.item.item.item != security_account.account_id"
+#        with_items:
+#          - "{{ guardduty_invitation_id_jobs.results }}"
+#
+#      - name: Accept the invitation
+#        shell: |
+#          if [[ {{ item.item }} -eq {{ security_account.account_id }} ]]
+#          then
+#            echo "INFO - Skip security account"
+#            exit 0
+#          fi
+#          if [[ {{ item.item }} -eq {{ bastion_account.account_id }} ]]
+#          then
+#            echo "INFO - Skip bastion account"
+#            exit 0
+#          fi
+#          DETECTOR_ID=$(aws guardduty list-detectors --query 'DetectorIds[*]' --output text)
+#          [[ -z ${DETECTOR_ID} ]] && { echo "ERROR - No DetectorID - exiting"; exit 1; }
+#          set -- $(aws guardduty get-master-account --detector-id ${DETECTOR_ID} --output text)
+#          if [[ ${5} == "Enabled" ]]
+#          then
+#            echo "INFO - Relationship is enabled"
+#            exit 0
+#          else
+#            INVITATION_ID=$(aws guardduty list-invitations --query 'Invitations[*].InvitationId' --output text)
+#            [[ -z ${INVITATION_ID} ]] && { echo "ERROR - No InvitationID - exiting"; exit 1; }
+#            aws guardduty accept-invitation --detector-id ${DETECTOR_ID} --invitation-id ${INVITATION_ID} --master-id {{ security_account.account_id }}
+#          fi
+#        environment:
+#          AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
+#          AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
+#          AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
+#          AWS_DEFAULT_REGION: "{{ item.region | default('eu-central-1') }}"
+#        with_items: "{{ security_assumed_role_subaccount_single.results }}"
+#
+#    # TODO: Remove the false condition when this is ready
+#    when: "security_account is defined"
+#    tags: [ 'security', 'security_guardduty' ]

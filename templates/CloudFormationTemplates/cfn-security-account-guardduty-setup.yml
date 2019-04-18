@@ -9,6 +9,7 @@ Resources:
   {{ cfn_org_name }}GuardDutyDetector:
     Type: "AWS::GuardDuty::Detector"
     Properties:
+      DeletionPolicy: "Retain"
       Enable: true
 
 {% for account in subaccounts %}
@@ -16,6 +17,7 @@ Resources:
   {{ cfn_org_name }}GDMember{{ account.account_id }}:
     Type: "AWS::GuardDuty::Member"
     Properties:
+      DeletionPolicy: "Retain"
       Status: "Invited"
       MemberId: "{{ account.account_id }}"
       Email: "{{ account.email }}"

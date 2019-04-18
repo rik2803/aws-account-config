@@ -22,9 +22,7 @@ This is the main playbook, and it includes all other playbooks
 
 ### `aws-account-security-setup.yml`
 
-
 ## What the playbook does
-
 
 ## The configuration file
 
@@ -164,8 +162,42 @@ The configuration file to use. The configuration file contains the description
 of your account structure, defines the _Organization_ account, the account to use
 as the _Bastion_ account, all subaccounts, users and group membership for the users.
 
-## Create the HTML page with the x-account links
+## Examples
+
+### Create the HTML page with the x-account links
 
 ```
 ansible-playbook aws-account-setup.yml --extra-vars=config_file=../aws-account-config-ixor/aws-account-config.yml --tags=html
+```
+
+### Run the playbook to create 1 account
+
+```
+### Create groups etc. on the bastion account
+ansible-playbook aws-account-setup.yml \
+    --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml" \
+    --tags=bastion
+### Setup the subaccount, run once for every subaccount
+ansible-playbook aws-account-setup.yml \
+    --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml subaccount_limit=<accountname>" \
+    --tags=subaccounts
+### Setup monitoring stuff
+ansible-playbook aws-account-setup.yml \
+    --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml" \
+    --tags=monitoring
+### Setup security stuff
+ansible-playbook aws-account-setup.yml \
+    --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml" \
+    --tags=security
+```
+
+How long do these playbooks take to run?
+
+* `bastion` part for 44 accounts: 20 minutes
+* The account setup for 1 account:  about 90 seconds
+
+### Only create and update users and user permissions
+
+```
+TODO ansible-playbook aws-account-setup.yml --extra-vars=config_file=../aws-account-config-ixor/aws-account-config.yml --tags=html
 ```
