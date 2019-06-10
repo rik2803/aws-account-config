@@ -33,7 +33,8 @@
                 "iam:GetSSHPublicKey",
                 "iam:DeleteSSHPublicKey",
                 "iam:UpdateSSHPublicKey",
-                "iam:UploadSSHPublicKey"
+                "iam:UploadSSHPublicKey",
+                "iam:GetAccessKeyLastUsed"
             ],
             "Resource": "arn:aws:iam::*:user/${aws:username}"
         },
