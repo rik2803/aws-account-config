@@ -183,7 +183,7 @@
       failed_when: false
       async: 7200
       poll: 0
-      tags: [ 'bastion', 'bastionrik' ]
+      tags: [ 'bastion' ]
     - name: Wait for async_createassumeroleenvpolicies tasks to finish
       async_status: jid={{ item.ansible_job_id }}
       register: async_createassumeroleenvpolicies_jobs
@@ -191,10 +191,10 @@
       retries: 300
       failed_when: false
       with_items: "{{ async_createassumeroleenvpolicies.results }}"
-      tags: [ 'bastion', 'bastionrik' ]
+      tags: [ 'bastion' ]
 
 
-    - name: Create policies for Assume<Role>-<organization> and assign to the respective groups
+    - name: Create policies for Assume<Role>-<entity> and assign to the respective groups
       iam_policy:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
@@ -210,14 +210,14 @@
       register: async_createassumeroleorgpolicies
       async: 7200
       poll: 0
-      tags: [ 'bastion', 'bastionrik' ]
+      tags: [ 'bastion' ]
     - name: Wait for async_createassumeroleorgpolicies tasks to finish
       async_status: jid={{ item.ansible_job_id }}
       register: async_createassumeroleorgpolicies_jobs
       until: async_createassumeroleorgpolicies_jobs.finished
       retries: 300
       with_items: "{{ async_createassumeroleorgpolicies.results }}"
-      tags: [ 'bastion', 'bastionrik' ]
+      tags: [ 'bastion' ]
 
 
     - name: Create policy ManageYourOwnUser in the bastion account and assign it to the group with the same name
@@ -230,7 +230,7 @@
         policy_name: "ManageYourOwnUser"
         policy_json: "{{ lookup('file', 'ManageYourOwnUser.json') }}"
         state: present
-      tags: [ 'bastion' ]
+      tags: [ 'bastion', 'bastionrik' ]
 
     - name: Create policy Billing in the bastion account and assign it to the billing group
       iam_policy:
@@ -242,7 +242,7 @@
         policy_name: "AssumeRole"
         policy_json: "{{ lookup('template', 'bastion-group-policy-billing.json.j2') }}"
         state: present
-      tags: [ 'bastion' ]
+      tags: [ 'bastion', 'bastionrik' ]
 
     - name: Assign policies to groups in the bastion account
       iam_policy:
@@ -260,14 +260,14 @@
       register: async_assignpoliciestogroups
       async: 7200
       poll: 0
-      tags: [ 'bastion_grouppolicy', 'bastion' ]
+      tags: [ 'bastion_grouppolicy', 'bastion', 'bastionrik' ]
     - name: Wait for async_assignpoliciestogroups tasks to finish
       async_status: jid={{ item.ansible_job_id }}
       register: async_assignpoliciestogroups_jobs
       until: async_assignpoliciestogroups_jobs.finished
       retries: 300
       with_items: "{{ async_assignpoliciestogroups.results }}"
-      tags: [ 'bastion_grouppolicy', 'bastion' ]
+      tags: [ 'bastion_grouppolicy', 'bastion', 'bastionrik' ]
 
 
     - name: Assign AdministratorAccess policies to the Admin group in the bastion account
@@ -278,7 +278,7 @@
         name: "Admin"
         managed_policy: "AdministratorAccess"
         state: present
-      tags: [ 'bastion' ]
+      tags: [ 'bastion', 'bastionrik' ]
 
     - name: Set password policy rules on the bastion account
       command: >
@@ -295,7 +295,7 @@
         AWS_SECRET_ACCESS_KEY: "{{ assumed_role.sts_creds.secret_key }}"
         AWS_SESSION_TOKEN: "{{ assumed_role.sts_creds.session_token }}"
         AWS_DEFAULT_REGION: "{{ assumed_role.region | default('eu-central-1') }}"
-      tags: [ 'bastion', 'passwordpolicy' ]
+      tags: [ 'bastion', 'passwordpolicy', 'bastionrik' ]
 
     ### Assumes role for setting the password policy on the subaccounts
     - name: Assume role for subaccounts
