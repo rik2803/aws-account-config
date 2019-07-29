@@ -1,4 +1,12 @@
-changed: [localhost] => (item=[{'name': 'AssumePowerLocal', 'role': 'powerlocal'}, 'hermes'])
+{% set accounts_in_entity = [] %}
+{% for account in subaccounts %}
+{%   if account.entity is defined and account.entity == item[1] %}
+{{     accounts_in_entity.append({'account_id': account.account_id, 'role': item[0]['role']}) }}
+{%   elif account.name.startswith(item[1] + '.') or account.name.startswith(item[1] + '-') or account.name.startswith(organization.name + '.' + item[1] + '.') or account.name.startswith(organization.name + '.' + item[1] + '-') %}
+{{     accounts_in_entity.append({'account_id': account.account_id, 'role': item[0]['role']}) }}
+{%   endif %}
+{% endfor %}
+
 {
     "Version": "2012-10-17",
     "Statement": [
@@ -9,10 +17,8 @@ changed: [localhost] => (item=[{'name': 'AssumePowerLocal', 'role': 'powerlocal'
                 "sts:AssumeRole"
             ],
             "Resource": [
-{% for account in subaccounts %}
-{%   if account.name.startswith(item[1] + '.') or account.name.startswith(item[1] + '-') or account.name.startswith(organization.name + '.' + item[1] + '.') or account.name.startswith(organization.name + '.' + item[1] + '-') %}
-                "arn:aws:iam::{{ account.account_id }}:role/{{ item[0]['role'] }}"{% if not loop.last %},{% endif %}
-{%   endif %}
+{% for account in accounts_in_entity %}
+                "arn:aws:iam::{{ account.account_id }}:role/{{ account.role }}"{% if not loop.last %},{% endif %}
 {% endfor %}
             ],
             "Condition": {
@@ -32,10 +38,8 @@ changed: [localhost] => (item=[{'name': 'AssumePowerLocal', 'role': 'powerlocal'
                 "sts:GetSessionToken"
             ],
             "Resource": [
-{% for account in subaccounts %}
-{%   if account.name.startswith(item[1] + '.') or account.name.startswith(item[1] + '-') or account.name.startswith(organization.name + '.' + item[1] + '.') or account.name.startswith(organization.name + '.' + item[1] + '-') %}
-                "arn:aws:iam::{{ account.account_id }}:role/{{ item[0]['role'] }}"{% if not loop.last %},{% endif %}
-{%   endif %}
+{% for account in accounts_in_entity %}
+                "arn:aws:iam::{{ account.account_id }}:role/{{ account.role }}"{% if not loop.last %},{% endif %}
 {% endfor %}
             ]
         }
