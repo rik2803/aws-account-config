@@ -27,6 +27,7 @@
     when: security_account is defined
     tags: [ 'security', 'securityaccount' ]
 
+### DOES NOT WORK ON ALREADY CONFIGURED ACCOUNTS - TO BE REVIEWED
 #  - name: Block for guardduty setup on the security account
 #    block:
 #      - name: Assume role for security/admin
