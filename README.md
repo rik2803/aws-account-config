@@ -149,6 +149,13 @@ Only run the `monitoring` tasks.
 
 Only run the playbooks that change stuff on the subaccounts.
 
+If the variable `subaccount_limit` is set, the subaccount actions are
+only performed for that account.
+
+```
+--extra-vars subaccount_limit=ixor.acertabudgettool-dev
+```
+
 ### `security_guardduty`
 
 Only run the `guardduty` tasks.
@@ -161,6 +168,10 @@ Only run the `guardduty` tasks.
 The configuration file to use. The configuration file contains the description
 of your account structure, defines the _Organization_ account, the account to use
 as the _Bastion_ account, all subaccounts, users and group membership for the users.
+
+### `subaccount_limit`
+
+Limit the subaccount actions to the specified subaccount
 
 ## Examples
 
@@ -195,9 +206,11 @@ How long do these playbooks take to run?
 
 * `bastion` part for 44 accounts: 20 minutes
 * The account setup for 1 account:  about 90 seconds
+* The `monitoring` tasks: about 5 minutes (should not be limited to 1 account)
+* The `security` related actions: about 10 minutes (should not be limited to 1 account)
 
 ### Only create and update users and user permissions
 
 ```
-TODO ansible-playbook aws-account-setup.yml --extra-vars=config_file=../aws-account-config-ixor/aws-account-config.yml --tags=html
+TODO ansible-playbook aws-account-setup.yml --extra-vars=config_file=../aws-account-config-ixor/aws-account-config.yml --tags=create_users
 ```
