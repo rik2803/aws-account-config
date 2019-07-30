@@ -48,3 +48,8 @@ Resources:
         DeliveryFrequency: Twelve_Hours
       S3BucketName: "{{ organization.name }}-prd-security-log-bucket"
 
+  ConfigAggregationAuthorization:
+    Type: AWS::Config::AggregationAuthorization
+    Properties:
+      AuthorizedAccountId: "{{ security_account.account_id }}"
+      AuthorizedAwsRegion: "{{ security_account.region | default('eu-central-1') }}"
