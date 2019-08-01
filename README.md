@@ -192,14 +192,18 @@ ansible-playbook aws-account-setup.yml \
 ansible-playbook aws-account-setup.yml \
     --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml subaccount_limit=<accountname>" \
     --tags=subaccounts
-### Setup monitoring stuff
+### Add access to tooling buckets to new account
 ansible-playbook aws-account-setup.yml \
     --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml" \
-    --tags=monitoring
+    --tags=tooling
 ### Setup security stuff
 ansible-playbook aws-account-setup.yml \
     --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml" \
     --tags=security
+### Setup monitoring stuff
+ansible-playbook aws-account-setup.yml \
+    --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml" \
+    --tags=monitoring
 ```
 
 How long do these playbooks take to run?
