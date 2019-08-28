@@ -109,5 +109,5 @@ Resources:
             - "{{ account.account_id }}"
 {% endfor %}
           AwsRegions:
-            {{ aws_local_regions }}
+            {{ aws_local_regions | to_json }}
       ConfigurationAggregatorName: "{{ cfn_org_name }}ConfigAggregator"
