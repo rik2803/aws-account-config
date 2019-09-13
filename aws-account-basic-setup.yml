@@ -327,6 +327,19 @@
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
       tags: [ 'subaccounts', 'passwordpolicy' ]
 
+    - name: Create IAM Service Linked Role for ECS
+      command: >
+        aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
+        AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
+        AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
+      with_items: "{{ assumed_role_subaccount_single.results }}"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
+      tags: [ 'subaccounts', 'servicelinkedrole' ]
+      failed_when: false
+
     ### Create *Local policies
 
     - name: Create the AdministratorAccessLocal policy with region restrictions
