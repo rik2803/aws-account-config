@@ -12,7 +12,64 @@ Resources:
 {% endif %}
 
 {# Create global resources only once #}
+{#   Create a lambda function store bucket in all regions defined in aws_local_regions #}
+{#   Create a role for CRR (Cross-Region Replication) #}
+{#   Setup Cross-region replication #}
 {% if item == 'eu-central-1' %}
+  S3CrossRegionReplicationPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "S3CrossRegionReplicationPolicy"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetReplicationConfiguration
+              - s3:ListBucket
+            Resource:
+              - arn:aws:s3:::{{ bucket_name }}-public
+              - arn:aws:s3:::{{ bucket_name }}
+          - Effect: Allow
+            Action:
+              - s3:GetObjectVersion
+              - s3:GetObjectVersionAcl
+              - s3:GetObjectVersionTagging
+              - s3:GetObjectRetention
+              - s3:GetObjectLegalHold
+            Resource:
+              - arn:aws:s3:::{{ bucket_name }}-public/*
+              - arn:aws:s3:::{{ bucket_name }}/*
+          - Effect: Allow
+            Action:
+              - s3:ReplicateObject
+              - s3:ReplicateDelete
+              - s3:ReplicateTags
+            Resource:
+{%   for region in aws_local_regions %}
+{%     if region != 'eu-central-1' %}
+              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}/*
+              - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}-public/*
+{%     endif %}
+{%   endfor %}
+
+  S3CrossRegionReplicationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - !Ref S3CrossRegionReplicationPolicy
+      AssumeRolePolicyDocument: >-
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            { "Sid": "",
+              "Effect": "Allow",
+              "Principal": { "Service": "s3.amazonaws.com" },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }
+
   S3LambdaFunctionStoreUser:
     Type: AWS::IAM::User
     DependsOn:
@@ -27,52 +84,7 @@ Resources:
     Properties:
       UserName:
         !Ref S3LambdaFunctionStoreUser
-{% endif %}
 
-  {{ cfn_tooling_name_prefix }}S3LambdaFunctionStore:
-    Type: AWS::S3::Bucket
-    Properties:
-      AccessControl: Private
-      BucketName: "{{ bucket_name }}"
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-      LifecycleConfiguration:
-        Rules:
-          - NoncurrentVersionExpirationInDays: 60
-            Status: Enabled
-      Tags:
-      - Key: Application
-        Value: "ixortooling"
-      - Key: Environment
-        Value: "prd"
-      - Key: Customer
-        Value: "NA"
-
-  {{ cfn_tooling_name_prefix }}S3PublicLambdaFunctionStore:
-    Type: AWS::S3::Bucket
-    Properties:
-      AccessControl: PublicRead
-      BucketName: "{{ bucket_name }}-public"
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-      LifecycleConfiguration:
-        Rules:
-          - NoncurrentVersionExpirationInDays: 60
-            Status: Enabled
-      Tags:
-        - Key: Application
-          Value: "ixortooling"
-        - Key: Environment
-          Value: "prd"
-        - Key: Customer
-          Value: "NA"
-
-{# Create global resources only once #}
-{% if item == 'eu-central-1' %}
   {{ cfn_tooling_name_prefix }}S3LambdaFunctionStoreFullAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -100,6 +112,71 @@ Resources:
 {%     endif %}
 {%   endfor %}
 {% endif %}
+
+  {{ cfn_tooling_name_prefix }}S3LambdaFunctionStore:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketName: "{{ bucket_name }}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - NoncurrentVersionExpirationInDays: 60
+            Status: Enabled
+      VersioningConfiguration:
+        Status: Enabled
+{% if item == 'XXXXeu-central-1XXXX' %}
+{# Skip replication for now, because there can only be 1 destination bucket #}
+{# Set replication rules in eu-central-1 #}
+      ReplicationConfiguration:
+        Role: !Ref S3CrossRegionReplicationRole
+        Rules:
+{%   for region in aws_local_regions %}
+{%     if region != 'eu-central-1' %}
+          - Destination:
+              Bucket: arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}
+            Prefix: ""
+            Status: Enabled
+          - Destination:
+              Bucket: arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}-public
+            Prefix: ""
+            Status: Enabled
+{%     endif %}
+{%   endfor %}
+{% endif %}
+      Tags:
+      - Key: Application
+        Value: "ixortooling"
+      - Key: Environment
+        Value: "prd"
+      - Key: Customer
+        Value: "NA"
+
+  {{ cfn_tooling_name_prefix }}S3PublicLambdaFunctionStore:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      BucketName: "{{ bucket_name }}-public"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - NoncurrentVersionExpirationInDays: 60
+            Status: Enabled
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Application
+          Value: "ixortooling"
+        - Key: Environment
+          Value: "prd"
+        - Key: Customer
+          Value: "NA"
 
   {{ cfn_tooling_name_prefix }}CrossAccountAccessToS3LambdaFunctionStore:
     Type: AWS::S3::BucketPolicy

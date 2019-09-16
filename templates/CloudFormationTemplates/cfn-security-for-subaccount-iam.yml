@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 
 Resources:
 
-  ### IAM resources required on all accounts, but only in 1 region (eu-central-1) because IAM resources are global
+  ### IAM resources required in all regions, but only created in 1 region (eu-central-1) because IAM resources are global
   S3AccessToLambdaStorePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
