@@ -306,7 +306,7 @@
       with_items:
         - "{{ subaccounts }}"
       when: "bastion_account.account_id != item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.name )"
-      tags: [ 'subaccounts', 'passwordpolicy', 'createroles', 'organization' ]
+      tags: [ 'subaccounts', 'passwordpolicy', 'createroles', 'organization', 'keypair' ]
 
     - name: Set password policy rules on the sub accounts
       command: >
@@ -414,7 +414,7 @@
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
 
-    ### This assumes #aws_roles time a role per account, bacause these will be used in the
+    ### This assumes #aws_roles time a role per account, because these will be used in the
     ### a loop to create all roles on all subaccounts.
     - name: Assume role for subaccounts
       sts_assume_role:
@@ -425,7 +425,7 @@
         - "{{ subaccounts }}"
         - "{{ aws_roles }}"
       when: "bastion_account.account_id != item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item[0].name )"
-      tags: [ 'subaccounts', 'createroles', 'keypair' ]
+      tags: [ 'subaccounts', 'createroles' ]
 
     - name: Create roles on subaccounts for trusted access from the bastion account
       iam_role:
@@ -482,14 +482,14 @@
         aws_access_key: "{{ item[0].sts_creds.access_key }}"
         aws_secret_key: "{{ item[0].sts_creds.secret_key }}"
         security_token: "{{ item[0].sts_creds.session_token }}"
-        name: "id_rsa_{{ item[0].item[0].name }}"
-        key_material: "{{ item[0].item[0].pubkey }}"
+        name: "id_rsa_{{ item[0].item.name }}"
+        key_material: "{{ item[0].item.pubkey }}"
         region: "{{ item[1] }}"
         state: present
       with_nested:
-        - "{{ assumed_role_subaccount.results }}"
+        - "{{ assumed_role_subaccount_single.results }}"
         - "{{ aws_local_regions }}"
-      when: "bastion_account.account_id != item[0].item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item[0].item[0].name ) and item[0].item[0].pubkey is defined"
+      when: "bastion_account.account_id != item[0].item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item[0].item.name ) and item[0].item.pubkey is defined"
       register: async_uploadaccountpubkey
       async: 7200
       poll: 0
