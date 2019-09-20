@@ -81,10 +81,11 @@ window.accounts = {
           var account = value.name
           var account_id = value.account_id
           var remoterole = selectedRole
+          var account_aws_config = account.replace(/\./g, "-")
 
           crossAccountLinkList.add('<a href="https://signin.aws.amazon.com/switchrole?account=' + account_id + '&roleName=' + remoterole + '&displayName=' + account + '_' + remoterole + '">' + account + ' ' + remoterole + '</a><br>')
           assumeRoleList.add('&nbsp;&nbsp;&nbsp;&nbsp;"' + account + '-' + remoterole + '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' + account_id + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUserName + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' + remoterole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}')
-          awsConfigRoleList.add('[profile ' + account + ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' + account_id + ':role/' + remoterole + '<br>mfa_serial = arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUserName + '<br>region = ' + selectedRegion + '<br><br>')
+          awsConfigRoleList.add('[profile ' + account_aws_config + ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' + account_id + ':role/' + remoterole + '<br>mfa_serial = arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUserName + '<br>region = ' + selectedRegion + '<br><br>')
       })
   } else {
       var groups = selectedUser.groups
