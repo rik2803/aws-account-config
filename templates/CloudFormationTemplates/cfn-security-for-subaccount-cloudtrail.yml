@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: |
+  Configure Security
+
+Resources:
+
+  ### AWS CloudTrail
+  Trail:
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      S3BucketName: "{{ organization.name }}-prd-security-log-bucket"
+      IsLogging: true
+      EnableLogFileValidation: true
+      IncludeGlobalServiceEvents: true
+      IsMultiRegionTrail: true

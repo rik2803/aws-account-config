@@ -80,6 +80,12 @@
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-iam-for-subaccount-{{ item.item }}.yml"
         with_items: "{{ security_assumed_role_subaccount_single.results }}"
 
+      - name: Create CFN template from Ansible template for the CloudTrail security setup on the subaccounts
+        template:
+          src: "CloudFormationTemplates/cfn-security-for-subaccount-cloudtrail.yml"
+          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-cloudtrail-for-subaccount-{{ item.item }}.yml"
+        with_items: "{{ security_assumed_role_subaccount_single.results }}"
+
       ### Stack for all regions in aws_local_regions
       - name: Create/Update Security CloudFormation Stack on all accounts in all regions in "{{ aws_local_regions }}"
         cloudformation:
@@ -98,8 +104,8 @@
         async: 7200
         poll: 0
 
-      ### Stack for home region (eu-central-1)
-      - name: Create/Update IAM Security CloudFormation Stack on all accounts in all (home) region eu-central-1
+      ### IAM Stack for home region (eu-central-1)
+      - name: Create/Update IAM Security CloudFormation Stack on all accounts in (home) region eu-central-1
         cloudformation:
           aws_access_key: "{{ item.sts_creds.access_key }}"
           aws_secret_key: "{{ item.sts_creds.secret_key }}"
@@ -112,6 +118,23 @@
         with_items:
           - "{{ security_assumed_role_subaccount_single.results }}"
         register: async_createsecurityiamcloudformationstack
+        async: 7200
+        poll: 0
+
+      ### CloudTrail Stack for home region (eu-central-1)
+      - name: Create/Update CloudTrail Security CloudFormation Stack on all accounts in (home) region eu-central-1
+        cloudformation:
+          aws_access_key: "{{ item.sts_creds.access_key }}"
+          aws_secret_key: "{{ item.sts_creds.secret_key }}"
+          security_token: "{{ item.sts_creds.session_token }}"
+          region: eu-central-1
+          stack_name: "{{ cfn_org_name }}SecuritySubaccountCloudTrail"
+          state: "present"
+          disable_rollback: false
+          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-cloudtrail-for-subaccount-{{ item.item }}.yml"
+        with_items:
+          - "{{ security_assumed_role_subaccount_single.results }}"
+        register: async_createsecuritycloudtrailcloudformationstack
         async: 7200
         poll: 0
 
@@ -129,6 +152,13 @@
         until: async_createsecurityiamcloudformationstack_jobs.finished
         retries: 300
         with_items: "{{ async_createsecurityiamcloudformationstack.results | default([]) }}"
+
+      - name: Wait for async_createsecuritycloudtrailcloudformationstack tasks to finish
+        async_status: jid={{ item.ansible_job_id }}
+        register: async_createsecuritycloudtrailcloudformationstack_jobs
+        until: async_createsecuritycloudtrailcloudformationstack_jobs.finished
+        retries: 300
+        with_items: "{{ async_createsecuritycloudtrailcloudformationstack.results | default([]) }}"
 
     when: security_account is defined
     tags: [ 'security', 'security_subaccount' ]
