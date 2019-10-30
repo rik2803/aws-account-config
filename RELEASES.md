@@ -11,4 +11,4 @@
 
 ## `v0.0.1`
 
-Everyting that was in place on Septembet 10, 2019.
+Everything that was in place on September 10, 2019.
