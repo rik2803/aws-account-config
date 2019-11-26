@@ -144,6 +144,7 @@ window.accounts = {
           function (t) {
               var role = t.role
               var remoterole = rolemapping[role]
+              var nameNoDots = t.name.replace(/\./g, "-")
 
               crossAccountLinkList.add(
                   '<a href="https://signin.aws.amazon.com/switchrole?account=' +
@@ -164,7 +165,7 @@ window.accounts = {
               )
               awsConfigRoleList.add(
                   '[profile ' +
-                  t.name + '-' +
+                  nameNoDots + '-' +
                   remoterole +
                   ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' +
                   t.account_id + ':role/' + remoterole +
