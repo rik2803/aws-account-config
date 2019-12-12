@@ -151,18 +151,18 @@
         state: update
       with_items: "{{ aws_users }}"
       when: aws_users is defined
-      register: async_assignuserstogroups
-      async: 7200
-      poll: 0
+#      register: async_assignuserstogroups
+#      async: 7200
+#      poll: 0
       tags: [ 'bastion', 'create_users' ]
-    - name: Wait for async_assignuserstogroups tasks to finish
-      async_status: jid={{ item.ansible_job_id }}
-      register: async_assignuserstogroups_jobs
-      until: async_assignuserstogroups_jobs.finished
-      retries: 300
-      with_items: "{{ async_assignuserstogroups.results }}"
-      when: aws_users is defined
-      tags: [ 'bastion', 'create_users' ]
+#    - name: Wait for async_assignuserstogroups tasks to finish
+#      async_status: jid={{ item.ansible_job_id }}
+#      register: async_assignuserstogroups_jobs
+#      until: async_assignuserstogroups_jobs.finished
+#      retries: 300
+#      with_items: "{{ async_assignuserstogroups.results }}"
+#      when: aws_users is defined
+#      tags: [ 'bastion', 'create_users' ]
 
 
     ### There might be environments (i.e. tst) that have no associated account, that's OK
