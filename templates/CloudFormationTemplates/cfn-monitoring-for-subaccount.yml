@@ -82,7 +82,7 @@ Resources:
         S3Bucket: "{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ item[1] }}"
 {%   endif %}
         S3Key: "{{ lambda_s3_keys.sns_to_chat }}"
-      Runtime: nodejs8.10
+      Runtime: nodejs12.x
 
   SNSSubscriptionChatWebhook{{ chat_webhook.cfn_name }}:
     Type: AWS::SNS::Subscription
