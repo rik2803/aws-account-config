@@ -85,7 +85,7 @@ window.accounts = {
 
           crossAccountLinkList.add('<a href="https://signin.aws.amazon.com/switchrole?account=' + account_id + '&roleName=' + remoterole + '&displayName=' + account + '_' + remoterole + '">' + account + ' ' + remoterole + '</a><br>')
           assumeRoleList.add('&nbsp;&nbsp;&nbsp;&nbsp;"' + account + '-' + remoterole + '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' + account_id + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUserName + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' + remoterole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}')
-          awsConfigRoleList.add('[profile ' + account_aws_config + ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' + account_id + ':role/' + remoterole + '<br>mfa_serial = arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUserName + '<br>region = ' + selectedRegion + '<br><br>')
+          awsConfigRoleList.add('[' + account_aws_config + ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' + account_id + ':role/' + remoterole + '<br>mfa_serial = arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUserName + '<br>region = ' + selectedRegion + '<br><br>')
       })
   } else {
       var groups = selectedUser.groups
@@ -164,7 +164,7 @@ window.accounts = {
                   remoterole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}'
               )
               awsConfigRoleList.add(
-                  '[profile ' +
+                  '[' +
                   nameNoDots + '-' +
                   remoterole +
                   ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' +
@@ -199,9 +199,11 @@ window.accounts = {
   )
   document.write('&nbsp;&nbsp;}<br>}<br></code>')
 
-  document.write('<h2>~/.aws/config for ' + vars.user + '</h2><br><code>')
-  document.write('[profile {{ organization.name }}-bastion]<br/>')
+  document.write('<h2>~/.aws/credentials for ' + vars.user + '</h2><br><code>')
+  document.write('[{{ organization.name }}-bastion]<br/>')
   document.write('region = eu-central-1<br/>')
+  document.write('aws_access_key_id = AKIAxxxxxxxxx<br/>')
+  document.write('aws_secret_access_key = xxxxxxxxxxxxxxxx<br/>')
   document.write('<br/>')
   let awsConfigRoleArray = Array.from(awsConfigRoleList)
   awsConfigRoleArray.forEach(
