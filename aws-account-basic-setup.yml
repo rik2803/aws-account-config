@@ -305,7 +305,7 @@
       register: "assumed_role_subaccount_single"
       with_items:
         - "{{ subaccounts }}"
-      when: "bastion_account.account_id != item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.name )"
+      when: "bastion_account.account_id != item.account_id and ( subaccount_limit == 'all' or item.name.startswith(subaccount_limit) )"
       tags: [ 'subaccounts', 'passwordpolicy', 'createroles', 'organization', 'keypair' ]
 
     - name: Set password policy rules on the sub accounts
@@ -324,7 +324,7 @@
         AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
         AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
       with_items: "{{ assumed_role_subaccount_single.results }}"
-      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       tags: [ 'subaccounts', 'passwordpolicy' ]
 
     - name: Create IAM Service Linked Role for ECS
@@ -336,7 +336,7 @@
         AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
         AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
       with_items: "{{ assumed_role_subaccount_single.results }}"
-      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       tags: [ 'subaccounts', 'servicelinkedrole' ]
       failed_when: false
 
@@ -351,7 +351,7 @@
         policy: "{{ lookup('template', 'AdministratorAccessLocal.json.j2') }}"
         state: present
       with_items: "{{ assumed_role_subaccount_single.results }}"
-      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       register: async_AdministratorAccessLocal
       async: 7200
       poll: 0
@@ -375,7 +375,7 @@
         policy: "{{ lookup('template', 'PowerUserAccessLocal.json.j2') }}"
         state: present
       with_items: "{{ assumed_role_subaccount_single.results }}"
-      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       register: async_PowerUserAccessLocal
       async: 7200
       poll: 0
@@ -399,7 +399,7 @@
         policy: "{{ lookup('template', 'ReadOnlyAccessLocal.json.j2') }}"
         state: present
       with_items: "{{ assumed_role_subaccount_single.results }}"
-      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item.name )"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       register: async_ReadOnlyAccessLocal
       async: 7200
       poll: 0
@@ -424,7 +424,7 @@
       with_nested:
         - "{{ subaccounts }}"
         - "{{ aws_roles }}"
-      when: "bastion_account.account_id != item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item[0].name )"
+      when: "bastion_account.account_id != item[0].account_id and ( subaccount_limit == 'all' or item[0].name.startswith(subaccount_limit) )"
       tags: [ 'subaccounts', 'createroles' ]
 
     - name: Create roles on subaccounts for trusted access from the bastion account
@@ -438,7 +438,7 @@
         state: present
       #no_log: True
       with_items: "{{ assumed_role_subaccount.results }}"
-      when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item[0].name )"
+      when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or item.item[0].name.startswith(subaccount_limit) )"
       register: async_createroletrustedaccess
       async: 7200
       poll: 0
@@ -463,7 +463,7 @@
         AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
         AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
       with_items: "{{ assumed_role_subaccount.results }}"
-      when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or subaccount_limit == item.item[0].name )"
+      when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or item.item[0].name.startswith(subaccount_limit) )"
       register: async_setsessionduration
       async: 7200
       poll: 0
@@ -489,7 +489,7 @@
       with_nested:
         - "{{ assumed_role_subaccount_single.results }}"
         - "{{ aws_local_regions }}"
-      when: "bastion_account.account_id != item[0].item.account_id and ( subaccount_limit == 'all' or subaccount_limit == item[0].item.name ) and item[0].item.pubkey is defined"
+      when: "bastion_account.account_id != item[0].item.account_id and ( subaccount_limit == 'all' or item[0].item.name.startswith(subaccount_limit) ) and item[0].item.pubkey is defined"
       register: async_uploadaccountpubkey
       async: 7200
       poll: 0

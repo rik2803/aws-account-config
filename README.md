@@ -183,7 +183,19 @@ ansible-playbook aws-account-setup.yml --extra-vars=config_file=../aws-account-c
 
 ### Run the playbook to create 1 account
 
+**Note:** The `<accountname>` in `subaccount_limit` can be a part of the accountname. That allows
+you to provision multiple environments for the same project in one run:
+
 ```
+... subaccount_limit=ixor.leveranciersportaal
+```
+
+will match:
+
+* `ixor.leveranciersportaal-tst`
+* `ixor.leveranciersportaal-stg`
+* `ixor.leveranciersportaal-prd`
+ 
 ### Create groups etc. on the bastion account
 ansible-playbook aws-account-setup.yml \
     --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml" \
@@ -210,6 +222,7 @@ How long do these playbooks take to run?
 
 * `bastion` part for 44 accounts: 20 minutes
 * The account setup for 1 account:  about 90 seconds
+* The `tooling` tasks take not more than a couple of minutes
 * The `monitoring` tasks: about 5 minutes (should not be limited to 1 account)
 * The `security` related actions: about 10 minutes (should not be limited to 1 account)
 
