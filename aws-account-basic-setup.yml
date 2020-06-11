@@ -128,6 +128,8 @@
         password: "{{ item.initial_password | default('Change_0n_login') }}"
       with_items: "{{ aws_users }}"
       when: aws_users is defined
+      loop_control:
+        pause: 1
       register: async_createawsusers
       async: 7200
       poll: 0
@@ -301,7 +303,7 @@
     - name: Assume role for subaccounts
       sts_assume_role:
         role_arn: "arn:aws:iam::{{ item.account_id }}:role/{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
-        role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
+        role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrgAccAccRole') }}"
       register: "assumed_role_subaccount_single"
       with_items:
         - "{{ subaccounts }}"
@@ -419,7 +421,7 @@
     - name: Assume role for subaccounts
       sts_assume_role:
         role_arn: "arn:aws:iam::{{ item[0].account_id }}:role/{{ item[0].sts_role | default('OrganizationAccountAccessRole') }}"
-        role_session_name: "{{ item[0].name }}-{{ item[0].sts_role | default('OrganizationAccountAccessRole') }}"
+        role_session_name: "{{ item[0].name }}-{{ item[0].sts_role | default('OrgAccAccRole') }}"
       register: "assumed_role_subaccount"
       with_nested:
         - "{{ subaccounts }}"

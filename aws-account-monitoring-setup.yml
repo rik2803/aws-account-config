@@ -4,7 +4,7 @@
       - name: Assume role for subaccounts
         sts_assume_role:
           role_arn: "arn:aws:iam::{{ item.account_id }}:role/{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
-          role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
+          role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrgAccAccRole') }}"
         register: "monitoring_assumed_role_subaccount_single"
         with_items:
           - "{{ subaccounts }}"
