@@ -197,22 +197,40 @@ will match:
 * `ixor.leveranciersportaal-prd`
  
 ### Create groups etc. on the bastion account
+
+```
 ansible-playbook aws-account-setup.yml \
     --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml" \
     --tags=bastion
+```
+
 ### Setup the subaccount, run once for every subaccount
+
+```
 ansible-playbook aws-account-setup.yml \
     --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml subaccount_limit=<accountname>" \
     --tags=subaccounts
+```
+
 ### Add access to tooling buckets to new account
+
+```
 ansible-playbook aws-account-setup.yml \
     --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml" \
     --tags=tooling
+```
+
 ### Setup security stuff
+
+```
 ansible-playbook aws-account-setup.yml \
     --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml" \
     --tags=security
+```
+
 ### Setup monitoring stuff
+
+```
 ansible-playbook aws-account-setup.yml \
     --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml" \
     --tags=monitoring
