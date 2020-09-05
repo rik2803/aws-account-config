@@ -55,12 +55,6 @@ Resources:
           Condition:
             StringEquals:
               AWS:SourceOwner: !Sub "${AWS::AccountId}"
-        - Sid: AllowSNSPublishPolicyStatement
-          Effect: Allow
-          Principal:
-            AWS: "*"
-          Action: SNS:Publish
-          Resource: !Ref MonitoringSNSTopic
       Topics:
         - !Ref MonitoringSNSTopic
 
