@@ -22,7 +22,7 @@
         role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
       register: assumed_role
-      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users', 'bastionrik' ]
+      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users', 'bastionrik', 'bastion_custom_groups' ]
       check_mode: no
 
     - name: Create groups in the bastion account
@@ -46,7 +46,6 @@
       retries: 300
       with_items: "{{ async_creategroups.results }}"
       tags: [ 'bastion' ]
-
 
     - name: Create billing group in the bastion account for billing access to organization account
       iam_group:
@@ -113,6 +112,16 @@
         - Admin
         - ManageYourOwnUser
       tags: [ 'bastion' ]
+
+    - name: Create custom groups in the bastion account
+      iam_group:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "{{ item.name }}"
+        state: present
+      with_items: "{{ custom_groups }}"
+      tags: [ 'bastion', 'bastion_custom_groups' ]
 
     - name: Create users in the bastion account
       iam:
@@ -220,6 +229,30 @@
       retries: 300
       with_items: "{{ async_createassumeroleorgpolicies.results }}"
       tags: [ 'bastion' ]
+
+
+    - name: Create Custom policies for assign to the respective groups
+      iam_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: group
+        iam_name: "{{ item.name }}"
+        policy_name: "AssumeRole"
+        policy_json: "{{ lookup('template', 'bastion-group-policy-custom.json.j2') }}"
+        state: present
+      with_items: "{{ custom_groups }}"
+      register: async_createassumerolecustompolicies
+      async: 7200
+      poll: 0
+      tags: [ 'bastion', 'bastion_custom_groups' ]
+    - name: Wait for async_createassumerolecustompolicies tasks to finish
+      async_status: jid={{ item.ansible_job_id }}
+      register: async_createassumerolecustompolicies_jobs
+      until: async_createassumerolecustompolicies_jobs.finished
+      retries: 300
+      with_items: "{{ async_createassumerolecustompolicies.results }}"
+      tags: [ 'bastion', 'bastion_custom_groups' ]
 
 
     - name: Create policy ManageYourOwnUser in the bastion account and assign it to the group with the same name

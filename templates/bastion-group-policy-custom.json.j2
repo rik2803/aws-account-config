@@ -1,0 +1,38 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "1",
+            "Effect": "Allow",
+            "Action": [
+                "sts:AssumeRole"
+            ],
+            "Resource": [
+{% for account in item.accounts %}
+                "arn:aws:iam::{{ account }}:role/{{ item.role }}"{% if not loop.last %},{% endif %}
+{% endfor %}
+            ],
+            "Condition": {
+                "Bool": {
+                    "aws:MultiFactorAuthPresent": "true",
+                    "aws:SecureTransport": "true"
+                },
+                "NumericLessThan": {
+                    "aws:MultiFactorAuthAge": "43200"
+                }
+            }
+        },
+        {
+            "Sid": "2",
+            "Effect": "Allow",
+            "Action": [
+                "sts:GetSessionToken"
+            ],
+            "Resource": [
+{% for account in item.accounts %}
+                "arn:aws:iam::{{ account }}:role/{{ item.role }}"{% if not loop.last %},{% endif %}
+{% endfor %}
+            ]
+        }
+    ]
+}
