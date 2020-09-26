@@ -14,19 +14,54 @@ Resources:
       BucketName: "{{ organization.name }}-prd-security-log-bucket"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
-        - ServerSideEncryptionByDefault:
-            SSEAlgorithm: AES256
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LoggingConfiguration:
+        DestinationBucketName: !Ref {{ cfn_org_name }}ServerAccessLogBucket
       LifecycleConfiguration:
         Rules:
-        - NoncurrentVersionExpirationInDays: 60
-          Status: Enabled
+          - NoncurrentVersionExpirationInDays: 60
+            Status: Enabled
       Tags:
-      - Key: Application
-        Value: "{{ organization.name }}security"
-      - Key: Environment
-        Value: "prd"
-      - Key: Customer
-        Value: "shared"
+        - Key: Application
+          Value: "{{ organization.name }}security"
+        - Key: Environment
+          Value: "prd"
+        - Key: Customer
+          Value: "shared"
+
+  {{ cfn_org_name }}ServerAccessLogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: LogDeliveryWrite
+      BucketName: "{{ organization.name }}-prd-server-access-logs"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - NoncurrentVersionExpirationInDays: 60
+            Status: Enabled
+          - ExpirationInDays: 183
+            Status: Enabled
+      Tags:
+        - Key: Application
+          Value: "{{ organization.name }}security"
+        - Key: Environment
+          Value: "prd"
+        - Key: Customer
+          Value: "shared"
 
   {{ cfn_org_name }}GuardDutyListsBucket:
     Type: AWS::S3::Bucket
@@ -37,6 +72,11 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
       LifecycleConfiguration:
         Rules:
           - NoncurrentVersionExpirationInDays: 60
@@ -60,45 +100,45 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-        - Sid: AWSCloudTrailAcl
-          Effect: Allow
-          Principal:
-            Service: cloudtrail.amazonaws.com
-          Action: s3:GetBucketAcl
-          Resource: arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket
-        - Sid: AWSCloudTrailWrite
-          Effect: Allow
-          Principal:
-            Service: cloudtrail.amazonaws.com
-          Action: s3:PutObject
-          Resource:
-            - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ bastion_account.account_id }}/*
+          - Sid: AWSCloudTrailAcl
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:GetBucketAcl
+            Resource: arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket
+          - Sid: AWSCloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource:
+              - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ bastion_account.account_id }}/*
 {% for account in subaccounts %}
-            - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ account.account_id }}/*
+              - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ account.account_id }}/*
 {% endfor %}
-          Condition:
-            StringEquals:
-              s3:x-amz-acl: bucket-owner-full-control
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-control
 
-        - Sid: AWSConfigAcl
-          Effect: Allow
-          Principal:
-            Service: config.amazonaws.com
-          Action: s3:GetBucketAcl
-          Resource: arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket
-        - Sid: AWSConfigWrite
-          Effect: Allow
-          Principal:
-            Service: config.amazonaws.com
-          Action: s3:PutObject
-          Resource:
-            - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ bastion_account.account_id }}/*
+          - Sid: AWSConfigAcl
+            Effect: Allow
+            Principal:
+              Service: config.amazonaws.com
+            Action: s3:GetBucketAcl
+            Resource: arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket
+          - Sid: AWSConfigWrite
+            Effect: Allow
+            Principal:
+              Service: config.amazonaws.com
+            Action: s3:PutObject
+            Resource:
+              - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ bastion_account.account_id }}/*
 {% for account in subaccounts %}
-            - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ account.account_id }}/*
+              - arn:aws:s3:::{{ organization.name }}-prd-security-log-bucket/AWSLogs/{{ account.account_id }}/*
 {% endfor %}
-          Condition:
-            StringEquals:
-              s3:x-amz-acl: bucket-owner-full-control
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-control
 
   {{ cfn_org_name }}SecurityConfigAggregator:
     Type: AWS::Config::ConfigurationAggregator
