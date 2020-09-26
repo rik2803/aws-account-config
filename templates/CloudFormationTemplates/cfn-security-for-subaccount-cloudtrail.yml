@@ -14,3 +14,321 @@ Resources:
       EnableLogFileValidation: true
       IncludeGlobalServiceEvents: true
       IsMultiRegionTrail: true
+      CloudWatchLogsLogGroupArn: !GetAtt LogGroup.Arn
+      CloudWatchLogsRoleArn: !GetAtt CloudWatchLogsRole.Arn
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: cloudtrail
+      RetentionInDays: 14
+
+  CloudWatchLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: allow-access-to-cw-logs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: !GetAtt LogGroup.Arn
+
+  SecurityGroupChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref LogGroup
+      FilterPattern: "{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName
+        = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress)
+        || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup)
+        || ($.eventName = DeleteSecurityGroup) }"
+      MetricTransformations:
+        - MetricNamespace: CloudTrailMetrics
+          MetricName: SecurityGroupEventCount
+          MetricValue: '1'
+  SecurityGroupChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CloudTrailSecurityGroupChanges
+      AlarmDescription: |
+        Alarms when an API call is made to create, update or delete a Security Group.
+      AlarmActions:
+        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+        - !Ref AlarmNotificationTopic
+      MetricName: SecurityGroupEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+  NetworkAclChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref LogGroup
+      FilterPattern: "{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry)
+        || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry)
+        || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation)
+        }"
+      MetricTransformations:
+        - MetricNamespace: CloudTrailMetrics
+          MetricName: NetworkAclEventCount
+          MetricValue: '1'
+  NetworkAclChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CloudTrailNetworkAclChanges
+      AlarmDescription: |
+        Alarms when an API call is made to create, update or delete a Network ACL.
+      AlarmActions:
+#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+        - !Ref AlarmNotificationTopic
+      MetricName: NetworkAclEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+  GatewayChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref LogGroup
+      FilterPattern: "{ ($.eventName = CreateCustomerGateway) || ($.eventName = DeleteCustomerGateway)
+        || ($.eventName = AttachInternetGateway) || ($.eventName = CreateInternetGateway)
+        || ($.eventName = DeleteInternetGateway) || ($.eventName = DetachInternetGateway)
+        }"
+      MetricTransformations:
+        - MetricNamespace: CloudTrailMetrics
+          MetricName: GatewayEventCount
+          MetricValue: '1'
+  GatewayChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CloudTrailGatewayChanges
+      AlarmDescription: |
+        Alarms when an API call is made to create, update or delete
+        a Customer or Internet Gateway.
+      AlarmActions:
+#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+        - !Ref AlarmNotificationTopic
+      MetricName: GatewayEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+  VpcChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref LogGroup
+      FilterPattern: "{ ($.eventName = CreateVpc) || ($.eventName = DeleteVpc) ||
+        ($.eventName = ModifyVpcAttribute) || ($.eventName = AcceptVpcPeeringConnection)
+        || ($.eventName = CreateVpcPeeringConnection) || ($.eventName = DeleteVpcPeeringConnection)
+        || ($.eventName = RejectVpcPeeringConnection) || ($.eventName = AttachClassicLinkVpc)
+        || ($.eventName = DetachClassicLinkVpc) || ($.eventName = DisableVpcClassicLink)
+        || ($.eventName = EnableVpcClassicLink) }"
+      MetricTransformations:
+        - MetricNamespace: CloudTrailMetrics
+          MetricName: VpcEventCount
+          MetricValue: '1'
+  VpcChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CloudTrailVpcChanges
+      AlarmDescription: |
+        Alarms when an API call is made to create, update or delete a VPC,
+        VPC peering connection or VPC connection to classic.
+      AlarmActions:
+#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+        - !Ref AlarmNotificationTopic
+      MetricName: VpcEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+  EC2InstanceChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref LogGroup
+      FilterPattern: "{ ($.eventName = RunInstances) || ($.eventName = RebootInstances)
+        || ($.eventName = StartInstances) || ($.eventName = StopInstances) || ($.eventName
+        = TerminateInstances) }"
+      MetricTransformations:
+        - MetricNamespace: CloudTrailMetrics
+          MetricName: EC2InstanceEventCount
+          MetricValue: '1'
+  EC2InstanceChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CloudTrailEC2InstanceChanges
+      AlarmDescription: |
+        Alarms when an API call is made to create, terminate, start,
+        stop or reboot an EC2 instance.
+      AlarmActions:
+#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+        - !Ref AlarmNotificationTopic
+      MetricName: EC2InstanceEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+  EC2LargeInstanceChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref LogGroup
+      FilterPattern: "{ ($.eventName = RunInstances) && (($.requestParameters.instanceType
+        = *.8xlarge) || ($.requestParameters.instanceType = *.4xlarge)) }"
+      MetricTransformations:
+        - MetricNamespace: CloudTrailMetrics
+          MetricName: EC2LargeInstanceEventCount
+          MetricValue: '1'
+  EC2LargeInstanceChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CloudTrailEC2LargeInstanceChanges
+      AlarmDescription: |
+        Alarms when an API call is made to create, terminate, start,
+        stop or reboot a 4x or 8x-large EC2 instance.
+      AlarmActions:
+#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+        - !Ref AlarmNotificationTopic
+      MetricName: EC2LargeInstanceEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+  CloudTrailChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref LogGroup
+      FilterPattern: "{ ($.eventName = CreateTrail) || ($.eventName = UpdateTrail)
+        || ($.eventName = DeleteTrail) || ($.eventName = StartLogging) || ($.eventName
+        = StopLogging) }"
+      MetricTransformations:
+        - MetricNamespace: CloudTrailMetrics
+          MetricName: CloudTrailEventCount
+          MetricValue: '1'
+  CloudTrailChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CloudTrailChanges
+      AlarmDescription: |
+        Alarms when an API call is made to create, update or delete a CloudTrail trail,
+        or to start or stop logging to a trail.
+      AlarmActions:
+#         - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+         - !Ref AlarmNotificationTopic
+      MetricName: CloudTrailEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+  ConsoleSignInFailuresMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref LogGroup
+      FilterPattern: '{ ($.eventName = ConsoleLogin) && ($.errorMessage = "Failed
+        authentication") }'
+      MetricTransformations:
+        - MetricNamespace: CloudTrailMetrics
+          MetricName: ConsoleSignInFailureCount
+          MetricValue: '1'
+  ConsoleSignInFailuresAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CloudTrailConsoleSignInFailures
+      AlarmDescription: |
+        Alarms when an unauthenticated API call is made to sign into the console.
+      AlarmActions:
+#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+        - !Ref AlarmNotificationTopic
+      MetricName: ConsoleSignInFailureCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '3'
+  AuthorizationFailuresMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref LogGroup
+      FilterPattern: '{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }'
+      MetricTransformations:
+        - MetricNamespace: CloudTrailMetrics
+          MetricName: AuthorizationFailureCount
+          MetricValue: '1'
+  AuthorizationFailuresAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CloudTrailAuthorizationFailures
+      AlarmDescription: |
+        Alarms when an unauthorized API call is made.
+      AlarmActions:
+#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+        - !Ref AlarmNotificationTopic
+      MetricName: AuthorizationFailureCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+  IAMPolicyChangesMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref LogGroup
+      FilterPattern: "{($.eventName=DeleteGroupPolicy) || ($.eventName=DeleteRolePolicy) ||
+        ($.eventName=DeleteUserPolicy) || ($.eventName=PutGroupPolicy) || ($.eventName=PutRolePolicy) ||
+        ($.eventName=PutUserPolicy) || ($.eventName=CreatePolicy) || ($.eventName=DeletePolicy) ||
+        ($.eventName=CreatePolicyVersion) || ($.eventName=DeletePolicyVersion) || ($.eventName=AttachRolePolicy) ||
+        ($.eventName=DetachRolePolicy) || ($.eventName=AttachUserPolicy) || ($.eventName=DetachUserPolicy) ||
+        ($.eventName=AttachGroupPolicy) || ($.eventName=DetachGroupPolicy)}"
+      MetricTransformations:
+        - MetricNamespace: CloudTrailMetrics
+          MetricName: IAMPolicyEventCount
+          MetricValue: '1'
+  IAMPolicyChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CloudTrailIAMPolicyChanges
+      AlarmDescription: |
+        Alarms when an API call is made to change an IAM policy.
+      AlarmActions:
+#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+        - !Ref AlarmNotificationTopic
+      MetricName: IAMPolicyEventCount
+      Namespace: CloudTrailMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1'
+
+  AlarmNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Endpoint: rik.tytgat@ixor.be
+          Protocol: email
