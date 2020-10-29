@@ -22,8 +22,51 @@
         role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
       register: assumed_role
-      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users', 'bastionrik', 'bastion_custom_groups' ]
+      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users', 'bastionrik', 'bastion_custom_groups', 'bastion_create_service_accounts' ]
       check_mode: no
+
+    - name: Create S3 bucket to hold cloudformation templates on the organization account
+      shell: |
+        if ! aws s3 ls | grep "{{ organization.name }}-{{ organization.account_id }}-cfn-templates"
+        then
+          aws s3 mb "s3://{{ organization.name }}-{{ organization.account_id }}-cfn-templates"
+        fi
+        aws s3api put-bucket-encryption \
+          --bucket {{ organization.name }}-{{ organization.account_id }}-cfn-templates \
+          --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
+        aws s3api put-public-access-block \
+          --bucket {{ organization.name }}-{{ organization.account_id }}-cfn-templates \
+          --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+      tags:
+        - bastion
+        - bastion_create_service_accounts
+
+    - name: Create service accounts for all subaccounts
+      block:
+        - name: Create CloudFormation stack to create ServiceAccounts for all subaccounts
+          template:
+            src: "CloudFormationTemplates/cfn-serviceaccounts-for-bastion.yml"
+            dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-serviceaccounts-for-bastion.yml"
+        - name: Put CFN template for service accounts on s3
+          shell: |
+            aws s3 cp "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-serviceaccounts-for-bastion.yml" \
+                      "s3://{{ organization.name }}-{{ organization.account_id }}-cfn-templates/cfn-{{ organization.name }}-serviceaccounts-for-bastion.yml"
+        - name: Get presigned URL for the ServiceAccounts template on S3
+          shell: |
+            aws s3 presign "s3://{{ organization.name }}-{{ organization.account_id }}-cfn-templates/cfn-{{ organization.name }}-serviceaccounts-for-bastion.yml"
+          register: presign
+        - name: Deploy CloudFormation stack to create service accounts for all subaccounts to the bastion account
+          cloudformation:
+            aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+            aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+            security_token: "{{ assumed_role.sts_creds.session_token }}"
+            stack_name: "{{ cfn_org_name }}SecurityServiceAccounts"
+            state: "present"
+            disable_rollback: false
+            template_url: "{{ presign.stdout }}"
+      tags:
+        - bastion
+        - bastion_create_service_accounts
 
     - name: Create groups in the bastion account
       iam_group:
