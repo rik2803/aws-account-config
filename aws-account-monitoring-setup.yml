@@ -1,4 +1,29 @@
 ---
+  - name: Block for monitoring setup on the bastion account
+    block:
+      - name: Assume role for bastion account
+        sts_assume_role:
+          role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/OrganizationAccountAccessRole"
+          role_session_name: "{{ bastion_account.name }}-OrgAccAccRole"
+        register: "monitoring_assumed_role_bastion"
+      - name: Create CFN template from Ansible template for the monitoring setup on the bastion account
+        template:
+          src: "CloudFormationTemplates/cfn-monitoring-for-subaccount.yml"
+          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-bastion-account.yml"
+      - name: Create/Update Monitoring CloudFormation Stack on the bastion account
+        cloudformation:
+          aws_access_key: "{{ monitoring_assumed_role_bastion.sts_creds.access_key }}"
+          aws_secret_key: "{{ monitoring_assumed_role_bastion.sts_creds.secret_key }}"
+          security_token: "{{ monitoring_assumed_role_bastion.sts_creds.session_token }}"
+          region: "eu-central-1"
+          stack_name: "{{ cfn_org_name }}MonitoringSubaccount"
+          state: "present"
+          disable_rollback: false
+          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-bastion-account.yml"
+
+    tags: [ 'monitoring', 'monitoring_subaccount', 'monitoring_bastion']
+
+
   - name: Block for monitoring setup on the subaccounts
     block:
       - name: Assume role for subaccounts
@@ -27,7 +52,6 @@
           state: "present"
           disable_rollback: false
           template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}-{{ item[1] }}.yml"
-          region: "{{ item[1] }}"
         with_nested:
           - "{{ monitoring_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
