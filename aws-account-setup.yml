@@ -54,6 +54,7 @@
   vars:
     - org: "{{ organization.name | default('Unknown') }}"
     - subaccount_limit: "{{ subaccount | default('all') }}"
+    - config_basedir: "{{ config_file | dirname }}"
 
   tasks:
     - name: Import basic account setup tasks
@@ -66,6 +67,9 @@
     - name: Import monitoring account setup tasks
       import_tasks: aws-account-monitoring-setup.yml
       tags: [ 'monitoring' ]
+    - name: Create cached assumerole credentials
+      import_tasks: aws-assumerole-and-save-credentials.yml
+      tags: [ 'assumerole' ]
     - name: Tooling account setup
       import_tasks: aws-account-tooling-setup.yml
       tags: [ 'tooling' ]

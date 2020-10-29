@@ -1,0 +1,10 @@
+#! /bin/bash
+
+source {{ assumerole_cache_dir | default("/Users/rik/.assumerole.d/cache") }}/{{ item.item.name }}
+
+cd {{ accountconfig_base_dir | default("/Users/rik/projects/AWSAccountConfigsIxor") }}/aws-{{ item.item.name }}-config
+
+export ANSIBLE_TAGS
+export ANSIBLE_SKIPTAGS
+
+./{{ item.item.dockerwrapper_command | default("dockerwrapper") }} {{ item.item.dockerwrapper_args | default("") }}
