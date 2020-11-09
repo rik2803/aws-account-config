@@ -5,5 +5,5 @@ lemo*html
 tryx*html
 dstudio*html
 .idea
-generated-files/*
+generated-files*/*
 *-html-deploy.bash
