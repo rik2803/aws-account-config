@@ -273,7 +273,6 @@
       with_items: "{{ async_createassumeroleorgpolicies.results }}"
       tags: [ 'bastion' ]
 
-
     - name: Create Custom policies for assign to the respective groups
       iam_policy:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
@@ -296,7 +295,6 @@
       retries: 300
       with_items: "{{ async_createassumerolecustompolicies.results }}"
       tags: [ 'bastion', 'bastion_custom_groups' ]
-
 
     - name: Create policy ManageYourOwnUser in the bastion account and assign it to the group with the same name
       iam_policy:
@@ -346,7 +344,6 @@
       retries: 300
       with_items: "{{ async_assignpoliciestogroups.results }}"
       tags: [ 'bastion_grouppolicy', 'bastion', 'bastionrik' ]
-
 
     - name: Assign AdministratorAccess policies to the Admin group in the bastion account
       iam_group:
@@ -443,7 +440,6 @@
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
-
     - name: Create the PowerUserAccessLocal policy with region restrictions
       iam_managed_policy:
         aws_access_key: "{{ item.sts_creds.access_key }}"
@@ -467,7 +463,6 @@
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
-
     - name: Create the ReadOnlyAccessLocal policy with region restrictions
       iam_managed_policy:
         aws_access_key: "{{ item.sts_creds.access_key }}"
@@ -490,7 +485,6 @@
       with_items: "{{ async_ReadOnlyAccessLocal.results | default([]) }}"
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
-
 
     ### This assumes #aws_roles time a role per account, because these will be used in the
     ### a loop to create all roles on all subaccounts.
@@ -529,7 +523,6 @@
       with_items: "{{ async_createroletrustedaccess.results | default([]) }}"
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles' ]
-
 
     ###
     - name: Set the SDK/CLI session duration for the role
