@@ -74,3 +74,9 @@
       import_tasks: aws-account-tooling-setup.yml
       tags: [ 'tooling' ]
       when: tooling_account is defined
+    - name: BB ServiceAccount Variables
+      import_tasks: aws-serviceaccounts-bb-repo-variables.yml
+      tags: [ 'bb' ]
+
+
+

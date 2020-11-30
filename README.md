@@ -175,10 +175,52 @@ Limit the subaccount actions to the specified subaccount
 
 ## Examples
 
+### Create _Service Accounts_ on the bastion account and related roles on all accounts
+
+```bash
+ansible-playbook aws-account-setup.yml \
+    --extra-vars=config_file=../aws-account-config-ixor/aws-account-config.yml \
+    --tags=bastion_create_service_accounts,security_subaccount_service_accounts
+```
+
+### Set all service account related BB pipeline variables in the repository
+
+This functionality uses the file `sa_bb_config.yml` in the base directory of
+`{{ config_file }}` to populate the repo variables.
+
+The config file looks like this:
+
+```yaml
+repos:
+  - name: "repo1"
+    service_account_permissions:
+      - envvar_name: "AWS_ACCESS_KEY_ID_ACCOUNT_A"
+        ssm_parameter: "AccessKeyId-AccountA"
+      - envvar_name: "AWS_SECRET_ACCESS_KEY_ACCOUNT_A"
+        ssm_parameter: "SecretAccessKey-AccountA"
+      - envvar_name: "AWS_ACCESS_KEY_ID_ACCOUNT_B"
+        ssm_parameter: "AccessKeyId-AccountB"
+      - envvar_name: "AWS_SECRET_ACCESS_KEY_ACCOUNT_B"
+        ssm_parameter: "SecretAccessKey-AccountB"
+    service_account_list: "ACCOUNT_AACCOUNT_B"
+```
+
+The SSM parameters should exist.
+
+The command to use to run this functionality is:
+
+```bash
+ansible-playbook aws-account-setup.yml \
+    --extra-vars=config_file=../aws-account-config-ixor/aws-account-config.yml \
+    --tags=bb
+```
+
 ### Create the HTML page with the x-account links
 
 ```
-ansible-playbook aws-account-setup.yml --extra-vars=config_file=../aws-account-config-ixor/aws-account-config.yml --tags=html
+ansible-playbook aws-account-setup.yml \
+    --extra-vars=config_file=../aws-account-config-ixor/aws-account-config.yml \
+    --tags=html
 ```
 
 ### Run the playbook to create 1 account
