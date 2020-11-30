@@ -175,6 +175,7 @@ Resources:
   EC2InstanceChangesAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
+      ActionsEnabled: false
       AlarmName: CloudTrailEC2InstanceChanges
       AlarmDescription: |
         Alarms when an API call is made to create, terminate, start,
