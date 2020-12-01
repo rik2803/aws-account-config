@@ -1,0 +1,29 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "codeartifact:DescribePackageVersion",
+        "codeartifact:DescribeRepository",
+        "codeartifact:GetPackageVersionReadme",
+        "codeartifact:GetRepositoryEndpoint",
+        "codeartifact:ListPackageVersionAssets",
+        "codeartifact:ListPackageVersionDependencies",
+        "codeartifact:ListPackageVersions",
+        "codeartifact:ListPackages",
+        "codeartifact:PublishPackageVersion",
+        "codeartifact:PutPackageMetadata",
+        "codeartifact:ReadFromRepository"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Principal": {
+        "AWS": [
+{% for account in subaccounts %}
+          "arn:aws:iam::{{ account.account_id }}:root"{{ ", " if not loop.last }}
+{% endfor %}
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ContributorPolicy",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+{% for account in subaccounts %}
+          "arn:aws:iam::{{ account.account_id }}:root"{{ ", " if not loop.last }}
+{% endfor %}
+        ]
+      },
+      "Action": [
+        "codeartifact:CreateRepository",
+        "codeartifact:DescribeDomain",
+        "codeartifact:GetAuthorizationToken",
+        "codeartifact:GetDomainPermissionsPolicy",
+        "codeartifact:ListRepositoriesInDomain",
+        "sts:GetServiceBearerToken",
+        "codeartifact:GetRepositoryEndpoint"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+---
+  - name: Assume role for tooling subaccount
+    sts_assume_role:
+      role_arn: "arn:aws:iam::{{ tooling_account.account_id }}:role/{{ tooling_account.sts_role | default('OrganizationAccountAccessRole') }}"
+      role_session_name: "{{ tooling_account.name }}-{{ tooling_account.sts_role | default('OrganizationAccountAccessRole') }}"
+    register: "tooling_assumed_role"
+
+  - name: Create Policy file for CodeArtifatct domain
+    template:
+      src: "codeartifact-domain-policy.json.j2"
+      dest: "{{ generated_files_dir | default('generated-files') }}/codeartifact-domain-policy.json"
+
+  - name: Create Policy file for CodeArtifatct repository
+    template:
+      src: "codeartifact-repository-policy.json.j2"
+      dest: "{{ generated_files_dir | default('generated-files') }}/codeartifact-repository-policy.json"
+
+  - name: Read CodeArtifact config
+    include_vars:
+      file: "{{ config_basedir }}/codeartifact.yml"
+      name: "codeartifact"
+
+  - debug:
+      msg: "{{ tooling_assumed_role }}"
+
+  - name: Set domain policy
+    shell: |
+      aws codeartifact put-domain-permissions-policy \
+        --domain-owner "{{ tooling_account.account_id }}" \
+        --domain "{{ item.name }}" \
+        --policy-document "file://{{ generated_files_dir | default('generated-files') }}/codeartifact-domain-policy.json"
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ tooling_assumed_role.sts_creds.access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ tooling_assumed_role.sts_creds.secret_key }}"
+      AWS_SESSION_TOKEN: "{{ tooling_assumed_role.sts_creds.session_token }}"
+      AWS_DEFAULT_REGION: "{{ item.region | default('eu-central-1') }}"
+    with_items:
+      - "{{ codeartifact.domains }}"
+
+  - name: Set repository policies
+    shell: |
+      aws codeartifact put-repository-permissions-policy \
+        --domain "{{ item.0.name }}" \
+        --domain-owner "{{ tooling_account.account_id }}" \
+        --repository "{{ item.1 }}" \
+        --policy-document "file://{{ generated_files_dir | default('generated-files') }}/codeartifact-repository-policy.json"
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ tooling_assumed_role.sts_creds.access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ tooling_assumed_role.sts_creds.secret_key }}"
+      AWS_SESSION_TOKEN: "{{ tooling_assumed_role.sts_creds.session_token }}"
+      AWS_DEFAULT_REGION: "{{ item.region | default('eu-central-1') }}"
+    with_subelements:
+      - "{{ codeartifact.domains }}"
+      -  "repositories"
+

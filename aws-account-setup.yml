@@ -77,6 +77,9 @@
     - name: BB ServiceAccount Variables
       import_tasks: aws-serviceaccounts-bb-repo-variables.yml
       tags: [ 'bb' ]
+    - name: Update CodeArtifact domain and repositorry policies
+      import_tasks: aws-set-codeartifact-policies.yml
+      tags: [ 'codeartifact' ]
 
 
 

@@ -183,6 +183,10 @@ ansible-playbook aws-account-setup.yml \
     --tags=bastion_create_service_accounts,security_subaccount_service_accounts
 ```
 
+### Apply cross-account policy to _CodeArtifact_ domains and repositories
+
+The _CodeArtifact
+
 ### Set all service account related BB pipeline variables in the repository
 
 This functionality uses the file `sa_bb_config.yml` in the base directory of
