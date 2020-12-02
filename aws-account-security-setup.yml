@@ -85,30 +85,42 @@
   ### This section creates a Service Account CloudFormation Stack on all accounts
   - name: Block for Service Account security setup on the subaccounts
     block:
-      - name: Create CFN template from Ansible template for the ServiceAccounts security setup on the subaccounts
-        template:
-          src: "{{ config_basedir }}/ServiceAccountRoles/{{ item.item.name }}.yml"
-          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.name }}.yml"
+      - name: "Does the account have a config file, if not use default.yml"
+        stat:
+          path: "{{ config_basedir }}/ServiceAccountRoles/{{ item.item.name }}.yml"
+        register: stat_sa_config
         with_items: "{{ security_assumed_role_subaccount_single.results }}"
-        failed_when: false
+
+      - name: "Create CFN template from Ansible template for the ServiceAccounts security setup on the subaccounts (own config file)"
+        template:
+          src: "{{ config_basedir }}/ServiceAccountRoles/{{ item.item.item.name }}.yml"
+          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.item.name }}.yml"
+        with_items: "{{ stat_sa_config.results }}"
+        when: "item.stat.exists"
+
+      - name: "Create CFN template from Ansible template for the ServiceAccounts security setup on the subaccounts (default config file)"
+        template:
+          src: "{{ config_basedir }}/ServiceAccountRoles/default.yml"
+          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.item.name }}.yml"
+        with_items: "{{ stat_sa_config.results }}"
+        when: "not item.stat.exists"
 
       ### ServiceAccounts Stack for home region (eu-central-1)
       - name: Create/Update ServiceAccounts Security CloudFormation Stack on all accounts in (home) region eu-central-1
         cloudformation:
-          aws_access_key: "{{ item.sts_creds.access_key }}"
-          aws_secret_key: "{{ item.sts_creds.secret_key }}"
-          security_token: "{{ item.sts_creds.session_token }}"
+          aws_access_key: "{{ item.item.sts_creds.access_key }}"
+          aws_secret_key: "{{ item.item.sts_creds.secret_key }}"
+          security_token: "{{ item.item.sts_creds.session_token }}"
           region: eu-central-1
           stack_name: "{{ cfn_org_name }}SecuritySubaccountServiceAccountRoles"
           state: "present"
           disable_rollback: false
-          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.name }}.yml"
+          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.item.name }}.yml"
         with_items:
-          - "{{ security_assumed_role_subaccount_single.results }}"
+          - "{{ stat_sa_config.results }}"
         register: async_createsecurityserviceaccountscloudformationstack
         async: 7200
         poll: 0
-        failed_when: false
 
       ### Wait
       - name: Wait for async_createsecurityserviceaccountscloudformationstack tasks to finish
