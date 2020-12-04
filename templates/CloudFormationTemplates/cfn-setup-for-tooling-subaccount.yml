@@ -126,6 +126,11 @@ Resources:
         Rules:
           - NoncurrentVersionExpirationInDays: 60
             Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
       VersioningConfiguration:
         Status: Enabled
 {% if item == 'XXXXeu-central-1XXXX' %}
