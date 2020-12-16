@@ -58,27 +58,30 @@
 
   tasks:
     - name: Import basic account setup tasks
-      import_tasks: aws-account-basic-setup.yml
+      import_tasks: ansible-includes/aws-account-basic-setup.yml
       tags: [ 'basic' ]
     - name: Import security setup tasks
-      import_tasks: aws-account-security-setup.yml
+      import_tasks: ansible-includes/aws-account-security-setup.yml
       tags: [ 'security' ]
       when: security_account is defined
     - name: Import monitoring account setup tasks
-      import_tasks: aws-account-monitoring-setup.yml
+      import_tasks: ansible-includes/aws-account-monitoring-setup.yml
       tags: [ 'monitoring' ]
+    - name: Import Bastion account setup tasks
+      import_tasks: ansible-includes/aws-account-bastion-setup.yml
+      tags: [ 'bastion' ]
     - name: Create cached assumerole credentials
-      import_tasks: aws-assumerole-and-save-credentials.yml
+      import_tasks: ansible-includes/aws-assumerole-and-save-credentials.yml
       tags: [ 'assumerole' ]
     - name: Tooling account setup
-      import_tasks: aws-account-tooling-setup.yml
+      import_tasks: ansible-includes/aws-account-tooling-setup.yml
       tags: [ 'tooling' ]
       when: tooling_account is defined
     - name: BB ServiceAccount Variables
-      import_tasks: aws-serviceaccounts-bb-repo-variables.yml
+      import_tasks: ansible-includes/aws-serviceaccounts-bb-repo-variables.yml
       tags: [ 'bb' ]
     - name: Update CodeArtifact domain and repositorry policies
-      import_tasks: aws-set-codeartifact-policies.yml
+      import_tasks: ansible-includes/aws-set-codeartifact-policies.yml
       tags: [ 'codeartifact' ]
 
 

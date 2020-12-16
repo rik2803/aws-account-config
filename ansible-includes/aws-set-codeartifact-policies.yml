@@ -20,9 +20,6 @@
       file: "{{ config_basedir }}/codeartifact.yml"
       name: "codeartifact"
 
-  - debug:
-      msg: "{{ tooling_assumed_role }}"
-
   - name: Set domain policy
     shell: |
       aws codeartifact put-domain-permissions-policy \

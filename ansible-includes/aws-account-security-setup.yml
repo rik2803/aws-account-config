@@ -52,7 +52,7 @@
 #    when: security_account is defined
 #    tags: [ 'security', 'security_guardduty' ]
 
-  ### Add bastion account to subaccounts
+  ### Add bastion account to subaccounts list of dicts
   - name: Create a fact to contain bastion config to be added to subaccounts
     set_fact:
       bastion_account_local:
