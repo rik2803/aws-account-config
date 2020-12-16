@@ -36,11 +36,11 @@
             template:
               src: "CloudFormationTemplates/cfn-codeartifactaccounts-for-bastion.yml"
               dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-codeartifactaccounts-for-bastion.yml"
-          - name: Put CFN template for service accounts on s3
+          - name: Put CFN template for codeartifact accounts on s3
             shell: |
               aws s3 cp "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-codeartifactaccounts-for-bastion.yml" \
                         "s3://{{ organization.name }}-{{ organization.account_id }}-cfn-templates/cfn-{{ organization.name }}-codeartifactaccounts-for-bastion.yml"
-          - name: Get presigned URL for the ServiceAccounts template on S3
+          - name: Get presigned URL for the CodeartifactAccounts template on S3
             shell: |
               aws s3 presign "s3://{{ organization.name }}-{{ organization.account_id }}-cfn-templates/cfn-{{ organization.name }}-codeartifactaccounts-for-bastion.yml"
             register: presign
