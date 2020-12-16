@@ -329,7 +329,7 @@ Resources:
 
   AlarmNotificationTopic:
     Type: AWS::SNS::Topic
-    Properties:
-      Subscription:
-        - Endpoint: rik.tytgat@ixor.be
-          Protocol: email
+#    Properties:
+#      Subscription:
+#        - Endpoint: rik.tytgat@ixor.be
+#          Protocol: email
