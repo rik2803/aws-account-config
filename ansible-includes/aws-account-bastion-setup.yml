@@ -13,24 +13,23 @@
     tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users', 'bastionrik', 'bastion_custom_groups', 'bastion_create_service_accounts', 'bastion_create_codeartifact_accounts' ]
     check_mode: no
 
+  - name: Create S3 bucket to hold cloudformation templates on the organization account
+    shell: |
+      if ! aws s3 ls | grep "{{ organization.name }}-{{ organization.account_id }}-cfn-templates"
+      then
+        aws s3 mb "s3://{{ organization.name }}-{{ organization.account_id }}-cfn-templates"
+      fi
+      aws s3api put-bucket-encryption \
+        --bucket {{ organization.name }}-{{ organization.account_id }}-cfn-templates \
+        --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
+      aws s3api put-public-access-block \
+        --bucket {{ organization.name }}-{{ organization.account_id }}-cfn-templates \
+        --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+    tags:
+      - always
+
   - name: Create codeartifact accounts
     block:
-      - name: Create S3 bucket to hold cloudformation templates on the organization account
-        shell: |
-          if ! aws s3 ls | grep "{{ organization.name }}-{{ organization.account_id }}-cfn-templates"
-          then
-            aws s3 mb "s3://{{ organization.name }}-{{ organization.account_id }}-cfn-templates"
-          fi
-          aws s3api put-bucket-encryption \
-            --bucket {{ organization.name }}-{{ organization.account_id }}-cfn-templates \
-            --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
-          aws s3api put-public-access-block \
-            --bucket {{ organization.name }}-{{ organization.account_id }}-cfn-templates \
-            --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
-        tags:
-          - bastion
-          - bastion_create_service_accounts
-
       - name: "Create code artifact from config in {{ config_basedir }}/codeartifact.yml"
         block:
           - name: Create CloudFormation stack to create CodeartifactAccounts
