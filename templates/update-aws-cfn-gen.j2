@@ -2,7 +2,11 @@
 
 source {{ assumerole_cache_dir | default("/Users/rik/.assumerole.d/cache") }}/{{ item.item.name }}
 
+{% if item.item.config_directory is defined %}
+cd {{ accountconfig_base_dir | default("/Users/rik/projects/AWSAccountConfigsIxor") }}/{{ item.item.config_directory }}
+{% else %}
 cd {{ accountconfig_base_dir | default("/Users/rik/projects/AWSAccountConfigsIxor") }}/aws-{{ item.item.name }}-config
+{% endif %}
 
 export ANSIBLE_TAGS
 export ANSIBLE_SKIPTAGS
