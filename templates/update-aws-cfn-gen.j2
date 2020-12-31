@@ -1,11 +1,11 @@
 #! /bin/bash
 
-source {{ assumerole_cache_dir | default("/Users/rik/.assumerole.d/cache") }}/{{ item.item.name }}
+source {{ sts_cache_dir | default(accountconfig_base_dir + '/.sts_cache') }}/{{ item.item.name }}
 
 {% if item.item.config_directory is defined %}
-cd {{ accountconfig_base_dir | default("/Users/rik/projects/AWSAccountConfigsIxor") }}/{{ item.item.config_directory }}
+cd {{ accountconfig_base_dir }}/{{ item.item.config_directory }}
 {% else %}
-cd {{ accountconfig_base_dir | default("/Users/rik/projects/AWSAccountConfigsIxor") }}/aws-{{ item.item.name }}-config
+cd {{ accountconfig_base_dir }}/aws-{{ item.item.name }}-config
 {% endif %}
 
 export ANSIBLE_TAGS
