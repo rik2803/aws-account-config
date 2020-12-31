@@ -10,7 +10,7 @@
       role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
       role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
     register: assumed_role
-    tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users', 'bastionrik', 'bastion_custom_groups', 'bastion_create_service_accounts', 'bastion_create_codeartifact_accounts' ]
+    tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users', 'bastion_custom_groups', 'bastion_create_service_accounts', 'bastion_create_codeartifact_accounts' ]
     check_mode: no
 
   - name: Create S3 bucket to hold cloudformation templates on the organization account
