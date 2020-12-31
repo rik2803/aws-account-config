@@ -13,12 +13,22 @@ objc[91589]: +[__NSCFConstantString initialize] may have been in progress in ano
 ERROR! A worker was found in a dead state
 ```
 
+## Tags and extra-vars
+
+```bash
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+ansible-playbook aws-account-setup.yml \
+    --extra-vars=config_file=../aws-account-config-ixor/aws-account-config.yml \
+    --extra-vars=limit_bb_rep0=tcc.backend.ws.wsdl \
+    --tags=bb
+```
+
 ## How it works?
 
 * Retrieve the SSM Secrets with the `client_id` and `secret_id` for OAuth2
   authentication with BB from the organization's bastion account
 * The config repository for the managed AWS organization should have a file named
-  `sa_bb_config.yml`. This file looks like this:
+  `sa_bb_config.yml` in de `BitbucketRepoConfigs` directory. This file looks like this:
 
 ```yaml
 tooling_account:
@@ -58,16 +68,17 @@ repos:
 
 ## The configuration file
 
-| Property                | Description                                                                                    |
-|-------------------------|------------------------------------------------------------------------------------------------|  
-| `tooling-account`       | The AWS account ID where _global_ artifacts are stored                                         |
-| `aws_default_region`    | The default region for the AWS profiles                                                        |
-| `service_account_list`  | List of dicts for the accounts for which to create BB pipeline variables                       |
-|  * `<n>.name`           | The name of the account, this will be used to retrieve the secrets from the SSM Paramter store |
-|  * `<n>.role_to_assume` | The role to assume on the account, defaults to `cicd`                                          |
-|  * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account   |
-|  `custom_vars`          | List of `name`/`value` dicts to create other BB pipeline variables                             |
-|  * `<n>.name`           | The name of the variable                                                                       |
-|  * `<n>.value`          | The value of the variable                                                                      |
-|  * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account   |
-|  * `<n>.secure`         | Is this a secure variable (`yes`) (will not show in BB) or not (`no` - default)                |
+| Property                | Description                                                                                     |
+|-------------------------|-------------------------------------------------------------------------------------------------|  
+| `tooling-account`       | The AWS account ID where _global_ artifacts are stored                                          |
+| `aws_default_region`    | The default region for the AWS profiles                                                         |
+| `service_account_list`  | List of dicts for the accounts for which to create BB pipeline variables                        |
+|  * `<n>.name`           | The name of the account, this will be used to retrieve the secrets from the SSM Parameter store |
+|  * `<n>.role_to_assume` | The role to assume on the account, defaults to `cicd`                                           |
+|  * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account    |
+|  `custom_vars`          | List of `name`/`value` dicts to create other BB pipeline variables                              |
+|  * `<n>.name`           | The name of the variable                                                                        |
+|  * `<n>.value`          | The value of the variable                                                                       |
+|  * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account    |
+|  * `<n>.secure`         | Is this a secure variable (`yes`) (will not show in BB) or not (`no` - default)                 |
+

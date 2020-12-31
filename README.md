@@ -189,8 +189,8 @@ The _CodeArtifact
 
 ### Set all service account related BB pipeline variables in the repository
 
-This functionality uses the file `sa_bb_config.yml` in the base directory of
-`{{ config_file }}` to populate the repo variables.
+This functionality uses the file `sa_bb_config.yml` in the `BitbucketRepoConfigs`
+directory of the `{{ config_file }}` basedir to populate the repo variables.
 
 The config file looks like this:
 
