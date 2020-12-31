@@ -19,7 +19,7 @@ ERROR! A worker was found in a dead state
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
 ansible-playbook aws-account-setup.yml \
     --extra-vars=config_file=../aws-account-config-ixor/aws-account-config.yml \
-    --extra-vars=limit_bb_rep0=tcc.backend.ws.wsdl \
+    --extra-vars=limit_bb_repo=tcc.backend.ws.wsdl \
     --tags=bb
 ```
 
