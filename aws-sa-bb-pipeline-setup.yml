@@ -58,32 +58,7 @@
     - config_basedir: "{{ config_file | dirname }}"
 
   tasks:
-    - name: Import basic account setup tasks
-      import_tasks: ansible-includes/aws-account-basic-setup.yml
-      tags: [ 'basic' ]
-    - name: Import security setup tasks
-      import_tasks: ansible-includes/aws-account-security-setup.yml
-      tags: [ 'security' ]
-      when: security_account is defined
-    - name: Import monitoring account setup tasks
-      import_tasks: ansible-includes/aws-account-monitoring-setup.yml
-      tags: [ 'monitoring' ]
-    - name: Import Bastion account setup tasks
-      import_tasks: ansible-includes/aws-account-bastion-setup.yml
-      tags: [ 'bastion' ]
-    - name: Create cached assumerole credentials
-      import_tasks: ansible-includes/aws-assumerole-and-save-credentials.yml
-      tags: [ 'assumerole', 'never' ]
-    - name: Tooling account setup
-      import_tasks: ansible-includes/aws-account-tooling-setup.yml
-      tags: [ 'tooling' ]
-      when: tooling_account is defined
     - name: BB ServiceAccount Variables
       import_tasks: ansible-includes/aws-serviceaccounts-bb-repo-variables.yml
-      tags: [ 'bb', 'never' ]
-    - name: Update CodeArtifact domain and repository policies
-      import_tasks: ansible-includes/aws-set-codeartifact-policies.yml
-      tags: [ 'codeartifact' ]
-
 
 

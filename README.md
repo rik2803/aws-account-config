@@ -13,15 +13,7 @@
 * A configuration file that describes your complete account setup
 * A personal configuration file `~/.aws-account-config.yml` that holds
   variables that might differ from user to user.
-
-## The `~/.aws-account-config.yml` config file
-
-| Name                     | Description                                                                      | Required? | Default                                    |
-|--------------------------|----------------------------------------------------------------------------------|-----------|--------------------------------------------|
-| `accountconfig_base_dir` | The base directory where your aws-cfn-gen account configuration repositories are | yes       | -                                          |
-| `sts_cache_dir`          | The directory where the temporary STS account credentials are stored             | no        | `{{ account_config_base_dir }}/.sts_cache` |
-| `sts_duration_seconds`   | Determines how long assumed role credentials are valid                           | no        | `3600`                                     |
-
+  
 ## PlayBooks in this repo
 
 ### `aws-account-setup`
