@@ -242,6 +242,7 @@
         policy_json: "{{ lookup('template', 'bastion-group-policy-custom.json.j2') }}"
         state: present
       with_items: "{{ custom_groups }}"
+      when: "custom_groups is defined"
       register: async_createassumerolecustompolicies
       async: 7200
       poll: 0
@@ -252,6 +253,7 @@
       until: async_createassumerolecustompolicies_jobs.finished
       retries: 300
       with_items: "{{ async_createassumerolecustompolicies.results }}"
+      when: "custom_groups is defined"
       tags: [ 'bastion', 'bastion_custom_groups' ]
 
     - name: Create policy ManageYourOwnUser in the bastion account and assign it to the group with the same name
