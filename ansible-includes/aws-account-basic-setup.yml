@@ -121,6 +121,7 @@
         name: "{{ item.name }}"
         state: present
       with_items: "{{ custom_groups }}"
+      when: "custom_groups is defined"
       tags: [ 'bastion', 'bastion_custom_groups' ]
 
     - name: Create users in the bastion account
