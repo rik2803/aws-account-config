@@ -99,7 +99,7 @@ Resources:
       Endpoint: {{ sns_subscription.endpoint }}
       Protocol: {{ sns_subscription.protocol }}
 {%     if sns_subscription.delivery_policy is defined %}
-      RedrivePolicy: {{ sns_subscription.delivery_policy }}
+      DeliverPolicy: {{ sns_subscription.delivery_policy }}
 {%     endif %}
       TopicArn: !Ref {{ sns_subscription.topic_arn_cfn_resource }}
 {%   endfor %}
