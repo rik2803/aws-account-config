@@ -30,6 +30,11 @@ Resources:
     Properties:
       DisplayName: MontoringSNSTopic
 
+  MonitoringOpsGenieTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: MontoringOpsGenieTopic
+
   MonitoringSNSTopicPolicy:
     Type: "AWS::SNS::TopicPolicy"
     Properties:
@@ -42,15 +47,15 @@ Resources:
           Principal:
             AWS: "*"
           Action:
-          - SNS:Publish
-          - SNS:RemovePermission
-          - SNS:SetTopicAttributes
-          - SNS:DeleteTopic
-          - SNS:ListSubscriptionsByTopic
-          - SNS:GetTopicAttributes
-          - SNS:Receive
-          - SNS:AddPermission
-          - SNS:Subscribe
+            - SNS:Publish
+            - SNS:RemovePermission
+            - SNS:SetTopicAttributes
+            - SNS:DeleteTopic
+            - SNS:ListSubscriptionsByTopic
+            - SNS:GetTopicAttributes
+            - SNS:Receive
+            - SNS:AddPermission
+            - SNS:Subscribe
           Resource: !Ref MonitoringSNSTopic
           Condition:
             StringEquals:
@@ -58,6 +63,47 @@ Resources:
       Topics:
         - !Ref MonitoringSNSTopic
 
+  MonitoringOpsGenieTopicPolicy:
+    Type: "AWS::SNS::TopicPolicy"
+    Properties:
+      PolicyDocument:
+        Version: '2008-10-17'
+        Id: __default_policy_ID
+        Statement:
+        - Sid: DefaultPolicyStatement
+          Effect: Allow
+          Principal:
+            AWS: "*"
+          Action:
+            - SNS:Publish
+            - SNS:RemovePermission
+            - SNS:SetTopicAttributes
+            - SNS:DeleteTopic
+            - SNS:ListSubscriptionsByTopic
+            - SNS:GetTopicAttributes
+            - SNS:Receive
+            - SNS:AddPermission
+            - SNS:Subscribe
+          Resource: !Ref MonitoringOpsGenieTopic
+          Condition:
+            StringEquals:
+              AWS:SourceOwner: !Sub "${AWS::AccountId}"
+      Topics:
+        - !Ref MonitoringOpsGenieTopic
+
+{% if item[0].item.monitoring is defined %}
+{%   for sns_subscription in item[0].item.monitoring.sns_subscriptions | default([]) %}
+  SNSSubscriptionOpsGenie:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: {{ sns_subscription.endpoint }}
+      Protocol: {{ sns_subscription.protocol }}
+{%     if sns_subscription.delivery_policy is defined %}
+      RedrivePolicy: {{ sns_subscription.delivery_policy }}
+{%     endif %}
+      TopicArn: !Ref {{ sns_subscription.topic_arn_cfn_resource }}
+{%   endfor %}
+{% endif %}
 
 {% for chat_webhook in item[0].item.chat_webhooks | default([]) %}
   ChatWebhook{{ chat_webhook.cfn_name }}:
