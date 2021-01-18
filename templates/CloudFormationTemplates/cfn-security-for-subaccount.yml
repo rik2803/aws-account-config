@@ -30,67 +30,66 @@ Resources:
         AllSupported: false
         IncludeGlobalResourceTypes: false
         ResourceTypes:
-          - AWS::ApiGatewayV2::Stage
           - AWS::ApiGateway::RestApi
           - AWS::ApiGatewayV2::Api
+          - AWS::ApiGatewayV2::Stage
+          - AWS::AutoScaling::LaunchConfiguration
+          - AWS::AutoScaling::ScalingPolicy
+          - AWS::AutoScaling::ScheduledAction
           - AWS::CloudFront::StreamingDistribution
           - AWS::EC2::EIP
-          - AWS::EC2::Instance
-          - AWS::EC2::SecurityGroup
-          - AWS::EC2::NatGateway
           - AWS::EC2::EgressOnlyInternetGateway
           - AWS::EC2::FlowLog
+          - AWS::EC2::Instance
+          - AWS::EC2::InternetGateway
+          - AWS::EC2::NatGateway
+          - AWS::EC2::NetworkAcl
+          - AWS::EC2::NetworkInterface
+          - AWS::EC2::RouteTable
+          - AWS::EC2::SecurityGroup
+          - AWS::EC2::Subnet
+          - AWS::EC2::VPC
           - AWS::EC2::VPCEndpoint
           - AWS::EC2::VPCEndpointService
           - AWS::EC2::VPCPeeringConnection
+          - AWS::EC2::VPNConnection
+          - AWS::EC2::VPNGateway
+          - AWS::ElasticBeanstalk::ApplicationVersion
+          - AWS::ElasticBeanstalk::Environment
+          - AWS::ElasticLoadBalancing::LoadBalancer
+          - AWS::ElasticLoadBalancingV2::LoadBalancer
+          - AWS::IAM::Group
+          - AWS::IAM::Policy
+          - AWS::IAM::Role
+          - AWS::NetworkFirewall::FirewallPolicy
+          - AWS::NetworkFirewall::RuleGroup
+          - AWS::RDS::DBCluster
+          - AWS::RDS::DBClusterSnapshot
+          - AWS::RDS::DBSecurityGroup
+          - AWS::RDS::DBSnapshot
+          - AWS::RDS::DBSubnetGroup
+          - AWS::RDS::EventSubscription
           - AWS::Redshift::ClusterParameterGroup
           - AWS::Redshift::ClusterSecurityGroup
           - AWS::Redshift::ClusterSnapshot
           - AWS::Redshift::ClusterSubnetGroup
           - AWS::Redshift::EventSubscription
-          - AWS::RDS::DBSecurityGroup
-          - AWS::RDS::DBSnapshot
-          - AWS::RDS::DBSubnetGroup
-          - AWS::RDS::EventSubscription
-          - AWS::RDS::DBCluster
-          - AWS::RDS::DBClusterSnapshot
           - AWS::S3::AccountPublicAccessBlock
-          - AWS::EC2::InternetGateway
-          - AWS::EC2::NetworkAcl
-          - AWS::EC2::RouteTable
-          - AWS::EC2::Subnet
-          - AWS::EC2::VPC
-          - AWS::EC2::VPNConnection
-          - AWS::EC2::VPNGateway
-          - AWS::AutoScaling::LaunchConfiguration
-          - AWS::AutoScaling::ScalingPolicy
-          - AWS::AutoScaling::ScheduledAction
-          - AWS::ElasticBeanstalk::ApplicationVersion
-          - AWS::ElasticBeanstalk::Environment
-          - AWS::IAM::Group
-          - AWS::IAM::Role
-          - AWS::IAM::Policy
-          - AWS::NetworkFirewall::FirewallPolicy
-          - AWS::NetworkFirewall::RuleGroup
+          - AWS::SSM::AssociationCompliance
+          - AWS::SSM::FileData
+          - AWS::SSM::PatchCompliance
           - AWS::ServiceCatalog::CloudFormationProvisionedProduct
           - AWS::ServiceCatalog::Portfolio
           - AWS::ShieldRegional::Protection
-          - AWS::SSM::PatchCompliance
-          - AWS::SSM::AssociationCompliance
-          - AWS::SSM::FileData
           - AWS::WAF::Rule
-          - AWS::WAF::WebACL
           - AWS::WAF::RuleGroup
+          - AWS::WAF::WebACL
           - AWS::WAFRegional::RateBasedRule
           - AWS::WAFRegional::Rule
-          - AWS::WAFRegional::WebACL
           - AWS::WAFRegional::RuleGroup
-          - AWS::WAFv2::RuleGroup
+          - AWS::WAFRegional::WebACL
           - AWS::WAFv2::ManagedRuleSet
-          - AWS::ElasticLoadBalancingV2::LoadBalancer
-          - AWS::ElasticLoadBalancing::LoadBalancer
-          - AWS::ElasticLoadBalancingV2::LoadBalancer
-
+          - AWS::WAFv2::RuleGroup
 
   ConfigDeliveryChannel:
     Type: AWS::Config::DeliveryChannel
