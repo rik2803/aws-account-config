@@ -3,6 +3,7 @@
     include_vars:
       file: "{{ config_basedir }}/codeartifact.yml"
       name: "codeartifact_config"
+    ignore_errors: yes
     tags:
       - always
   - name: Assume role for bastion/admin
