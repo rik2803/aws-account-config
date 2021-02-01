@@ -51,7 +51,6 @@
 
   vars_files:
     - "{{ config_file }}"
-    - "~/.aws-account-config.yml"
   vars:
     - org: "{{ organization.name | default('Unknown') }}"
     - subaccount_limit: "{{ subaccount | default('all') }}"
