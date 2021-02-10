@@ -1,0 +1,33 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "1",
+      "Effect": "Allow",
+      "Action": [
+        "sts:AssumeRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:role/IxorSSM/{{ item.name }}/*"
+      ],
+      "Condition": {
+        "Bool": {
+          "aws:MultiFactorAuthPresent": "true",
+          "aws:SecureTransport": "true"
+        },
+        "NumericLessThan": {
+          "aws:MultiFactorAuthAge": "43200"
+        }
+      }
+    },
+    {
+      "Sid": "2",
+      "Effect": "Allow",
+      "Action": [
+        "sts:GetSessionToken"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:role/IxorSSM/{{ item.name }}/*"            ]
+    }
+  ]
+}
