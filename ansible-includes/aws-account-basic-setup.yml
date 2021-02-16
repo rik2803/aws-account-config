@@ -152,6 +152,32 @@
       with_items: "{{ async_createawsusers.results }}"
       tags: [ 'bastion', 'create_users' ]
 
+    - name: Create inline policy for user to allow to assume timeboxed roles on all accounts
+      iam_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: user
+        iam_name: "{{ item.name }}"
+        policy_name: "assume-timeboxed-roles"
+        state: "{{ item.state | default('present') }}"
+        policy_json: "{{ lookup('template', 'templates/bastion-user-policy-assume-timeboxed-role.j2') }}"
+      with_items: "{{ aws_users }}"
+      when: aws_users is defined
+      loop_control:
+        pause: 1
+      register: async_createawsusers_inline_policy_timeboxed
+      async: 7200
+      poll: 0
+      tags: [ 'bastion', 'create_users' ]
+    - name: Wait for async_createawsusers tasks to finish
+      async_status: jid={{ item.ansible_job_id }}
+      register: async_createawsusers_jobs_inline_policy_timeboxed
+      until: async_createawsusers_jobs_inline_policy_timeboxed.finished
+      retries: 300
+      with_items: "{{ async_createawsusers_inline_policy_timeboxed.results }}"
+      tags: [ 'bastion', 'create_users' ]
+
     - name: Assign user to groups in the bastion account
       iam:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
@@ -163,19 +189,7 @@
         state: update
       with_items: "{{ aws_users }}"
       when: aws_users is defined
-#      register: async_assignuserstogroups
-#      async: 7200
-#      poll: 0
       tags: [ 'bastion', 'create_users' ]
-#    - name: Wait for async_assignuserstogroups tasks to finish
-#      async_status: jid={{ item.ansible_job_id }}
-#      register: async_assignuserstogroups_jobs
-#      until: async_assignuserstogroups_jobs.finished
-#      retries: 300
-#      with_items: "{{ async_assignuserstogroups.results }}"
-#      when: aws_users is defined
-#      tags: [ 'bastion', 'create_users' ]
-
 
     ### There might be environments (i.e. tst) that have no associated account, that's OK
     - name: Create policies for Assume<Role>-<env> and assign to the respective groups
