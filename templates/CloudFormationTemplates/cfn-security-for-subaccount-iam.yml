@@ -48,6 +48,33 @@ Resources:
             Resource:
               - "*"
 
+  IxorSSMSessionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: "SSMSession"
+      Path: "/IxorSSM/"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - ec2:Describe*
+              - ec2-instance-connect:*
+            Resource:
+              - arn:aws:ec2:{{ item.item.region | default('eu-central-1') }}:{{ item.item.account_id }}:instance/*
+          - Effect: Allow
+            Action:
+              - ssm:StartSession
+            Resource:
+              - arn:aws:ec2:{{ item.item.region | default('eu-central-1') }}:{{ item.item.account_id }}:instance/*
+              - arn:aws:ssm:eu-central-1::document/AWS-StartSSHSession
+          - Effect: Allow
+            Action:
+              - ssm:TerminateSession
+            Resource:
+              - arn:aws:ssm:*:*:session/${aws:username}-*
+              - arn:aws:ssm:*:*:session/*${aws:userid}-*
+
   LambdaBasicExecutionRole:
     Type: AWS::IAM::Role
     Properties:
