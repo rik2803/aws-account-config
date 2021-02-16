@@ -22,7 +22,7 @@
         role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
       register: assumed_role
-      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users', 'bastion_custom_groups', 'bastion_create_service_accounts' ]
+      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'accountalias', 'create_users', 'bastion_custom_groups', 'bastion_create_service_accounts' ]
       check_mode: no
 
     - name: Create groups in the bastion account
@@ -344,7 +344,7 @@
         AWS_SECRET_ACCESS_KEY: "{{ assumed_role.sts_creds.secret_key }}"
         AWS_SESSION_TOKEN: "{{ assumed_role.sts_creds.session_token }}"
         AWS_DEFAULT_REGION: "{{ assumed_role.region | default('eu-central-1') }}"
-      tags: [ 'bastion', 'passwordpolicy' ]
+      tags: [ 'bastion', 'passwordpolicy', 'accountalias' ]
 
     ### Assumes role for setting the password policy on the subaccounts
     - name: Assume role for subaccounts
@@ -355,7 +355,7 @@
       with_items:
         - "{{ subaccounts }}"
       when: "bastion_account.account_id != item.account_id and ( subaccount_limit == 'all' or item.name.startswith(subaccount_limit) )"
-      tags: [ 'subaccounts', 'passwordpolicy', 'createroles', 'organization', 'keypair' ]
+      tags: [ 'subaccounts', 'passwordpolicy', 'accountalias', 'createroles', 'organization', 'keypair' ]
 
     - name: Set password policy rules on the sub accounts
       command: >
@@ -375,6 +375,31 @@
       with_items: "{{ assumed_role_subaccount_single.results }}"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       tags: [ 'subaccounts', 'passwordpolicy' ]
+
+    - name: "Set account alias - step 1: use temp name to avoid failure when same alias is already set"
+      command: >
+        aws iam create-account-alias
+            --account-alias "{{ item.item.name | replace('.', '-') }}-temp"
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
+        AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
+        AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
+      with_items: "{{ assumed_role_subaccount_single.results }}"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
+      tags: [ 'subaccounts', 'accountalias' ]
+    - name: "Set account alias - step 2: use final alias name"
+      command: >
+        aws iam create-account-alias
+            --account-alias "{{ item.item.name | replace('.', '-') }}"
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
+        AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
+        AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
+      with_items: "{{ assumed_role_subaccount_single.results }}"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
+      tags: [ 'subaccounts', 'accountalias' ]
 
     - name: Create IAM Service Linked Role for ECS
       command: >
