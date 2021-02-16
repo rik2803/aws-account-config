@@ -244,6 +244,14 @@ will match:
 * `ixor.leveranciersportaal-stg`
 * `ixor.leveranciersportaal-prd`
  
+### Set account aliases on all subaccounts (`accountalias`)
+
+```bash
+ansible-playbook aws-account-setup.yml \
+    --extra-vars="config_file=../aws-account-config-ixor/aws-account-config.yml" \
+    --tags=accountalias
+```
+
 ### Create groups etc. on the bastion account
 
 ```
