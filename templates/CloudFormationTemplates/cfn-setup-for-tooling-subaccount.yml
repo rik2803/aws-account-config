@@ -111,6 +111,59 @@ Resources:
               - arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}-public/*
 {%     endif %}
 {%   endfor %}
+
+  {{ cfn_tooling_name_prefix }}S3DeployArtifacts:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketName: "ixortooling-prd-s3-deploy-artifacts"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Suspended
+      Tags:
+        - Key: Application
+          Value: "ixortooling"
+        - Key: Environment
+          Value: "prd"
+        - Key: Customer
+          Value: "NA"
+
+  {{ cfn_tooling_name_prefix }}CrossAccountAccessToS3DeployArtifacts:
+    Type: AWS::S3::BucketPolicy
+    DependsOn:
+      - {{ cfn_tooling_name_prefix }}S3DeployArtifacts
+    Properties:
+      Bucket: !Ref {{ cfn_tooling_name_prefix }}S3DeployArtifacts
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: CrossAccountAccessToS3DeployArtifacts
+            Effect: Allow
+            Principal:
+              AWS:
+{%   for account in subaccounts %}
+                # Access for account {{ account.name }}
+                - arn:aws:iam::{{ account.account_id }}:root
+{%   endfor %}
+            Action:
+              - s3:GetBucketLocation
+              - s3:ListBucket
+              - s3:GetObject
+              - s3:PutObject
+              - s3:PutObjectTagging
+              - s3:GetObjectTagging
+            Resource:
+              - arn:aws:s3:::ixortooling-prd-s3-deploy-artifacts
+              - arn:aws:s3:::ixortooling-prd-s3-deploy-artifacts/*
+
 {% endif %}
 
   {{ cfn_tooling_name_prefix }}S3LambdaFunctionStore:
@@ -142,11 +195,11 @@ Resources:
 {%   for region in aws_local_regions %}
 {%     if region != 'eu-central-1' %}
           - Destination:
-              Bucket: arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}
+              Bucket: "arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}"
             Prefix: ""
             Status: Enabled
           - Destination:
-              Bucket: arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}-public
+              Bucket: "arn:aws:s3:::{{ tooling_name_prefix_env }}-s3-lambda-function-store-{{ region }}-public"
             Prefix: ""
             Status: Enabled
 {%     endif %}
