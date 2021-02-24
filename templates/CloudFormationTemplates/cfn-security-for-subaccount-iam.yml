@@ -58,10 +58,19 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - ec2:Describe*
               - ec2-instance-connect:*
             Resource:
               - arn:aws:ec2:{{ item.item.region | default('eu-central-1') }}:{{ item.item.account_id }}:instance/*
+          - Effect: Allow
+            Action:
+              - ec2:Describe*
+            Resource:
+              - "*"
+          - Effect: Allow
+            Action:
+              - rds:Describe*
+            Resource:
+              - "*"
           - Effect: Allow
             Action:
               - ssm:StartSession
