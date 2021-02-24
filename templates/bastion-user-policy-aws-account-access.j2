@@ -1,0 +1,45 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "1",
+      "Effect": "Allow",
+      "Action": [
+        "sts:AssumeRole"
+      ],
+      "Resource": [
+{% if current_time < item.accounts_valid.until | default('2010-01-01T00:00:00Z') %}
+{%   if current_time > item.accounts_valid.from | default('2099-12-31T23:59:59Z') %}
+{%     for account in item.accounts | default([]) %}
+{%       for subaccount in subaccounts | default([]) %}
+{%         if subaccount.name | regex_search(account.name) %}
+        "arn:aws:iam::{{ subaccount.account_id }}:role/{{ account.role }}",
+{%         endif %}
+{%       endfor %}
+{%     endfor %}
+{%   endif %}
+{% endif %}
+        "arn:aws:iam::000000000000:role/dummyrole"
+      ],
+      "Condition": {
+        "Bool": {
+          "aws:MultiFactorAuthPresent": "true",
+          "aws:SecureTransport": "true"
+        },
+        "NumericLessThan": {
+          "aws:MultiFactorAuthAge": "43200"
+        },
+        "DateGreaterThan": { "aws:CurrentTime": "{{ item.accounts_valid.from | default('2099-12-31T23:59:59Z') }}" },
+        "DateLessThan": { "aws:CurrentTime": "{{ item.accounts_valid.until | default('2010-01-01T00:00:00Z') }}" }
+      }
+    },
+    {
+      "Sid": "2",
+      "Effect": "Allow",
+      "Action": [
+        "sts:GetSessionToken"
+      ],
+      "Resource": [ "*" ]
+    }
+  ]
+}

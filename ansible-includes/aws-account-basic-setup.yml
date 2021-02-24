@@ -22,7 +22,7 @@
         role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
       register: assumed_role
-      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'accountalias', 'create_users', 'bastion_custom_groups', 'bastion_create_service_accounts' ]
+      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'accountalias', 'create_users', 'create_aws_account_groups', 'bastion_custom_groups', 'bastion_create_service_accounts' ]
       check_mode: no
 
     - name: Create groups in the bastion account
@@ -124,6 +124,30 @@
       when: "custom_groups is defined"
       tags: [ 'bastion', 'bastion_custom_groups' ]
 
+    - name: Create managed policy for user based on user.accounts properties
+      iam_managed_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        policy_name: "AWSAccountAccessFor-{{ item.name }}"
+        state: "{{ item.state | default('present') }}"
+        policy: "{{ lookup('template', 'templates/bastion-user-policy-aws-account-access.j2') }}"
+      with_items: "{{ aws_users }}"
+      when: aws_users is defined
+      loop_control:
+        pause: 1
+      register: async_create_account_access_managed_policy
+      async: 7200
+      poll: 0
+      tags: [ 'bastion', 'create_users', 'create_aws_account_groups']
+    - name: Wait for async_create_account_access_managed_policy tasks to finish
+      async_status: jid={{ item.ansible_job_id }}
+      register: async_create_account_access_managed_policy_jobs
+      until: async_create_account_access_managed_policy_jobs.finished
+      retries: 300
+      with_items: "{{ async_create_account_access_managed_policy.results }}"
+      tags: [ 'bastion', 'create_users', 'create_aws_account_groups' ]
+
     - name: Create users in the bastion account
       iam:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
@@ -152,6 +176,31 @@
       with_items: "{{ async_createawsusers.results }}"
       tags: [ 'bastion', 'create_users' ]
 
+    - name: Attach managed policies to users
+      iam_user:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "{{ item.name }}"
+        state: "{{ item.state | default('present') }}"
+        managed_policies:
+          - "AWSAccountAccessFor-{{ item.name }}"
+      with_items: "{{ aws_users }}"
+      when: aws_users is defined
+      loop_control:
+        pause: 1
+      register: async_attach_managed_policies_to_user
+      async: 7200
+      poll: 0
+      tags: [ 'bastion', 'create_users', 'create_aws_account_groups' ]
+    - name: Wait for async_attach_managed_policies_to_user tasks to finish
+      async_status: jid={{ item.ansible_job_id }}
+      register: async_attach_managed_policies_to_user_jobs
+      until: async_attach_managed_policies_to_user_jobs.finished
+      retries: 300
+      with_items: "{{ async_attach_managed_policies_to_user.results }}"
+      tags: [ 'bastion', 'create_users', 'create_aws_account_groups' ]
+
     - name: Create inline policy for user to allow to assume timeboxed roles on all accounts
       iam_policy:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
@@ -170,7 +219,7 @@
       async: 7200
       poll: 0
       tags: [ 'bastion', 'create_users' ]
-    - name: Wait for async_createawsusers tasks to finish
+    - name: Wait for async_createawsusers_inline_policy_timeboxed tasks to finish
       async_status: jid={{ item.ansible_job_id }}
       register: async_createawsusers_jobs_inline_policy_timeboxed
       until: async_createawsusers_jobs_inline_policy_timeboxed.finished
