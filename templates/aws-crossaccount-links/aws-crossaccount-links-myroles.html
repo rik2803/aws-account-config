@@ -51,6 +51,45 @@ window.accounts = {
   var assumeRoleList = new Set()
   var awsConfigRoleList = new Set()
 
+  function addEntryToCrossAccountLinkList(crossAccountLinkList, accountId, accountName, remoteRole) {
+      crossAccountLinkList.add(
+          '<a href="https://signin.aws.amazon.com/switchrole?account=' +
+          accountId + '&roleName=' +
+          remoteRole + '&displayName=' +
+          accountName + '_' + remoteRole + '">' +
+          accountName + ' ' + remoteRole + '</a><br>'
+      )
+  }
+
+  function addEntryToAssumeroleList(assumeRoleList, accountId, accountName, remoteRole, userName) {
+      assumeRoleList.add(
+          '&nbsp;&nbsp;&nbsp;&nbsp;"' +
+          accountName + '-' + remoteRole +
+          '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' +
+          accountId +
+          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' +
+          bastionAccountId + ':mfa/' + userName +
+          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' +
+          remoteRole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}'
+      )
+
+  }
+
+  function addEntryToAwsConfigroleList(awsConfigRoleList, accountId, accountName, remoteRole, userName) {
+      var nameNoDots = accountName.replace(/\./g, "-")
+
+      awsConfigRoleList.add(
+          '[' +
+          nameNoDots + '-' +
+          remoteRole +
+          ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' +
+          accountId + ':role/' + remoteRole +
+          '<br>mfa_serial = arn:aws:iam::' +
+          bastionAccountId + ':mfa/' + userName +
+          '<br>region = ' + selectedRegion + '<br><br>'
+      )
+  }
+
   document.write('<h2>URL for the Bastion AWS Console</h2>')
   document.write('<a target="_blank" href="{{ bastion_account.console_url }}">Bastion Account Console</a><br/>')
 
@@ -83,11 +122,12 @@ window.accounts = {
           var remoterole = selectedRole
           var account_aws_config = account.replace(/\./g, "-")
 
-          crossAccountLinkList.add('<a href="https://signin.aws.amazon.com/switchrole?account=' + account_id + '&roleName=' + remoterole + '&displayName=' + account + '_' + remoterole + '">' + account + ' ' + remoterole + '</a><br>')
-          assumeRoleList.add('&nbsp;&nbsp;&nbsp;&nbsp;"' + account + '-' + remoterole + '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' + account_id + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUserName + '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' + remoterole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}')
-          awsConfigRoleList.add('[' + account_aws_config + ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' + account_id + ':role/' + remoterole + '<br>mfa_serial = arn:aws:iam::' + bastionAccountId + ':mfa/' + selectedUserName + '<br>region = ' + selectedRegion + '<br><br>')
+          addEntryToCrossAccountLinkList(crossAccountLinkList, account_id, account, remoterole)
+          addEntryToAssumeroleList(assumeRoleList, account_id, account, remoterole, selectedUserName)
+          addEntryToAwsConfigroleList(awsConfigRoleList, account_id, account, remoterole, selectedUserName)
       })
   } else {
+      // Add accounts for user.groups based access
       var groups = selectedUser.groups
       var parsedGroups = groups.map(
           function (groupString) {
@@ -146,36 +186,32 @@ window.accounts = {
               var remoterole = rolemapping[role]
               var nameNoDots = t.name.replace(/\./g, "-")
 
-              crossAccountLinkList.add(
-                  '<a href="https://signin.aws.amazon.com/switchrole?account=' +
-                  t.account_id + '&roleName=' +
-                  remoterole + '&displayName=' +
-                  t.name + '_' + remoterole + '">' +
-                  t.name + ' ' + remoterole + '</a><br>'
-              )
-              assumeRoleList.add(
-                  '&nbsp;&nbsp;&nbsp;&nbsp;"' +
-                  t.name + '-' + remoterole +
-                  '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' +
-                  t.account_id +
-                  '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' +
-                  bastionAccountId + ':mfa/' + selectedUser.name +
-                  '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' +
-                  remoterole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}'
-              )
-              awsConfigRoleList.add(
-                  '[' +
-                  nameNoDots + '-' +
-                  remoterole +
-                  ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' +
-                  t.account_id + ':role/' + remoterole +
-                  '<br>mfa_serial = arn:aws:iam::' +
-                  bastionAccountId + ':mfa/' + selectedUser.name +
-                  '<br>region = ' + selectedRegion + '<br><br>'
+              addEntryToCrossAccountLinkList(crossAccountLinkList, t.account_id, t.name, remoterole)
+              addEntryToAssumeroleList(assumeRoleList, t.account_id, t.name, remoterole, selectedUser.name)
+              addEntryToAwsConfigroleList(awsConfigRoleList, t.account_id, t.name, remoterole, selectedUser.name)
+          }
+      )
+  }
+
+  // Add accounts for user.accounts based access
+  if ( selectedUser.accounts ) {
+      selectedUser.accounts.forEach(
+          function (account) {
+              accounts.subaccounts.forEach(
+                  function (subaccount) {
+                      if ( subaccount.name.match(RegExp(account.name))) {
+                          addEntryToCrossAccountLinkList(crossAccountLinkList, subaccount.account_id, subaccount.name, account.role)
+                          addEntryToAssumeroleList(assumeRoleList, subaccount.account_id, subaccount.name, account.role, selectedUser.name)
+                          addEntryToAwsConfigroleList(awsConfigRoleList, subaccount.account_id, subaccount.name, account.role, selectedUser.name)
+                      } else {
+                          crossAccountLinkList.add('<b>' + subaccount.name + ' ' + account.name + 'NOPE</b>')
+                      }
+                  }
               )
           }
       )
   }
+
 
   document.write('<h2>AWS Cross Account links for ' + vars.user + '</h2><ul>')
   crossAccountLinkList.forEach(
