@@ -118,7 +118,6 @@ window.accounts = {
           const account = value.name
           const account_id = value.account_id
           const remoterole = selectedRole
-          const account_aws_config = account.replace(/\./g, "-")
 
           addEntryToCrossAccountLinkList(crossAccountLinkList, account_id, account, remoterole)
           addEntryToAssumeroleList(assumeRoleList, account_id, account, remoterole, selectedUserName)
