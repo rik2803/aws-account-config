@@ -22,7 +22,7 @@
         role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
       register: assumed_role
-      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'accountalias', 'create_users', 'create_aws_account_groups', 'bastion_custom_groups', 'bastion_create_service_accounts' ]
+      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'accountalias', 'create_users', 'create_aws_account_policy', 'bastion_custom_groups', 'bastion_create_service_accounts' ]
       check_mode: no
 
     - name: Create groups in the bastion account
@@ -139,14 +139,14 @@
       register: async_create_account_access_managed_policy
       async: 7200
       poll: 0
-      tags: [ 'bastion', 'create_users', 'create_aws_account_groups']
+      tags: [ 'bastion', 'create_users', 'create_aws_account_policy']
     - name: Wait for async_create_account_access_managed_policy tasks to finish
       async_status: jid={{ item.ansible_job_id }}
       register: async_create_account_access_managed_policy_jobs
       until: async_create_account_access_managed_policy_jobs.finished
       retries: 300
       with_items: "{{ async_create_account_access_managed_policy.results }}"
-      tags: [ 'bastion', 'create_users', 'create_aws_account_groups' ]
+      tags: [ 'bastion', 'create_users', 'create_aws_account_policy' ]
 
     - name: Create users in the bastion account
       iam:
@@ -192,14 +192,14 @@
       register: async_attach_managed_policies_to_user
       async: 7200
       poll: 0
-      tags: [ 'bastion', 'create_users', 'create_aws_account_groups' ]
+      tags: [ 'bastion', 'create_users', 'create_aws_account_policy' ]
     - name: Wait for async_attach_managed_policies_to_user tasks to finish
       async_status: jid={{ item.ansible_job_id }}
       register: async_attach_managed_policies_to_user_jobs
       until: async_attach_managed_policies_to_user_jobs.finished
       retries: 300
       with_items: "{{ async_attach_managed_policies_to_user.results }}"
-      tags: [ 'bastion', 'create_users', 'create_aws_account_groups' ]
+      tags: [ 'bastion', 'create_users', 'create_aws_account_policy' ]
 
     - name: Create inline policy for user to allow to assume timeboxed roles on all accounts
       iam_policy:
@@ -650,13 +650,13 @@
             dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config') }}/{{ org }}-myroles.html"
         - name: Check if a deploy script exists for the organization
           stat:
-            path: "{{ org }}-html-deploy.bash"
+            path: "html-deploy/{{ org }}-html-deploy.bash"
           register: deployscript
           failed_when: false
           changed_when: false
           check_mode: no
         - name: Run the script to deploy the HTML files
           shell: |
-            bash ./{{ org }}-html-deploy.bash
+            bash ./html-deploy/{{ org }}-html-deploy.bash
           when: "deployscript.stat.exists"
       tags: [ 'html', 'create_users' ]

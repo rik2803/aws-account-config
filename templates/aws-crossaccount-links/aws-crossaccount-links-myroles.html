@@ -7,7 +7,6 @@
             font-family: sans-serif;
         }
         h2 {
-            border: azure;
             border-width: 2;
             border-color: black;
             border-style: dotted;
@@ -42,14 +41,14 @@ window.accounts = {
 </script>
 
 <script>
-  var vars
-  var selectedUserName
-  var selectedRole
-  var selectedRegion
+  let vars
+  let selectedUserName
+  let selectedRole
+  let selectedRegion
 
-  var crossAccountLinkList = new Set()
-  var assumeRoleList = new Set()
-  var awsConfigRoleList = new Set()
+  const crossAccountLinkList = new Set()
+  const assumeRoleList = new Set()
+  const awsConfigRoleList = new Set()
 
   function addEntryToCrossAccountLinkList(crossAccountLinkList, accountId, accountName, remoteRole) {
       crossAccountLinkList.add(
@@ -72,11 +71,10 @@ window.accounts = {
           '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' +
           remoteRole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}'
       )
-
   }
 
   function addEntryToAwsConfigroleList(awsConfigRoleList, accountId, accountName, remoteRole, userName) {
-      var nameNoDots = accountName.replace(/\./g, "-")
+      const nameNoDots = accountName.replace(/\./g, "-")
 
       awsConfigRoleList.add(
           '[' +
@@ -100,27 +98,27 @@ window.accounts = {
     selectedRegion = vars.region || 'eu-central-1'
 
     if ( ! selectedUserName ) {
-      document.write('<b>Add query parameter user=yourawsuser to the URL<b>')
+      document.write('<b>Add query parameter user=your.aws.user to the URL<b>')
       selectedUser = 'unknown'
     }
   } else {
-    document.write('<b>Add query parameter user=yourawsuser to the URL<b>')
+    document.write('<b>Add query parameter user=your.aws.user to the URL<b>')
     selectedUserName = 'unknown'
   }
 
-  var selectedUser = users.aws_users.find(
+  const selectedUser = users.aws_users.find(
     function(user) {
       return user.name === selectedUserName
     }
   )
 
-  if ( selectedRole == 'admin') {
+  if ( selectedRole === 'admin') {
       accounts.subaccounts.sort( (a, b) => a.name > b.name ).forEach(
       function (value) {
-          var account = value.name
-          var account_id = value.account_id
-          var remoterole = selectedRole
-          var account_aws_config = account.replace(/\./g, "-")
+          const account = value.name
+          const account_id = value.account_id
+          const remoterole = selectedRole
+          const account_aws_config = account.replace(/\./g, "-")
 
           addEntryToCrossAccountLinkList(crossAccountLinkList, account_id, account, remoterole)
           addEntryToAssumeroleList(assumeRoleList, account_id, account, remoterole, selectedUserName)
@@ -128,17 +126,23 @@ window.accounts = {
       })
   } else {
       // Add accounts for user.groups based access
-      var groups = selectedUser.groups
-      var parsedGroups = groups.map(
+      // Remove the Admin group because it's "special"
+      const index = selectedUser.groups.indexOf("Admin");
+      if (index > -1) {
+          selectedUser.groups.splice(index, 1);
+      }
+
+      const groups = selectedUser.groups
+      const parsedGroups = groups.map(
           function (groupString) {
-              var split = groupString.split('-')
+              const split = groupString.split('-')
               return {role: split[0], account: split.slice(1).join('-')}
           }
       )
 
-      var matchingAccounts1 = accounts.subaccounts.map(
+      const matchingAccounts1 = accounts.subaccounts.map(
           function (account) {
-              var matchingGroup = parsedGroups.find(
+              const matchingGroup = parsedGroups.find(
                   function (group) {
                       if ( account.name.indexOf(group.account) !== -1 ) {
                           return group
@@ -155,9 +159,9 @@ window.accounts = {
           }
       ).filter(function(account) { return !!account })
 
-      var matchingAccounts2 = accounts.subaccounts.map(
+      const matchingAccounts2 = accounts.subaccounts.map(
           function (account) {
-              var matchingGroup = parsedGroups.find(
+              const matchingGroup = parsedGroups.find(
                   function (group) {
                       if ( account.environment === group.account ) {
                           return group
@@ -174,21 +178,17 @@ window.accounts = {
           }
       ).filter(function(account) { return !!account })
 
-      var matchingAccounts = matchingAccounts1.concat(matchingAccounts2)
+      const matchingAccounts = matchingAccounts1.concat(matchingAccounts2)
       console.log(matchingAccounts)
 
-      var string = JSON.stringify(matchingAccounts)
+      const string = JSON.stringify(matchingAccounts)
       console.log(string)
 
       matchingAccounts.sort( (a, b) => a.name> b.name ).forEach(
           function (t) {
-              var role = t.role
-              var remoterole = rolemapping[role]
-              var nameNoDots = t.name.replace(/\./g, "-")
-
-              addEntryToCrossAccountLinkList(crossAccountLinkList, t.account_id, t.name, remoterole)
-              addEntryToAssumeroleList(assumeRoleList, t.account_id, t.name, remoterole, selectedUser.name)
-              addEntryToAwsConfigroleList(awsConfigRoleList, t.account_id, t.name, remoterole, selectedUser.name)
+              addEntryToCrossAccountLinkList(crossAccountLinkList, t.account_id, t.name, rolemapping[t.role])
+              addEntryToAssumeroleList(assumeRoleList, t.account_id, t.name, rolemapping[t.role], selectedUser.name)
+              addEntryToAwsConfigroleList(awsConfigRoleList, t.account_id, t.name, rolemapping[t.role], selectedUser.name)
           }
       )
   }
@@ -203,8 +203,6 @@ window.accounts = {
                           addEntryToCrossAccountLinkList(crossAccountLinkList, subaccount.account_id, subaccount.name, account.role)
                           addEntryToAssumeroleList(assumeRoleList, subaccount.account_id, subaccount.name, account.role, selectedUser.name)
                           addEntryToAwsConfigroleList(awsConfigRoleList, subaccount.account_id, subaccount.name, account.role, selectedUser.name)
-                      } else {
-                          crossAccountLinkList.add('<b>' + subaccount.name + ' ' + account.name + 'NOPE</b>')
                       }
                   }
               )
