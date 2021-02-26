@@ -46,6 +46,7 @@
                 cfn_org_name: "{{ organization.name | title }}"
                 cfn_tooling_name_prefix: "{{ tooling_account.name | default('NA') | replace('-', ' ') | replace('.', ' ') | title | replace(' ', '') }}"
                 tooling_name_prefix_env: "{{ tooling_account.name | default('NA') | replace('-', '') | replace('.', '') }}-{{ tooling_account.environment | default('prd') }}"
+                current_time: "{{ lookup('pipe', 'date -u +\"%Y-%m-%dT%H:%M:%SZ\"') }}"
 
       tags: [ 'always' ]
 

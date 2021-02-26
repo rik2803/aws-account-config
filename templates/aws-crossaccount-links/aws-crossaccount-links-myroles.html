@@ -1,0 +1,250 @@
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>AWS Accounts</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        h2 {
+            border-width: 2;
+            border-color: black;
+            border-style: dotted;
+            background-color: orange;
+        }
+    </style>
+</head>
+
+<body>
+<script>
+window.rolemapping = {
+  "AssumePower": "power",
+  "AssumeAdmin": "admin",
+  "AssumeRead": "read",
+  "AssumePowerLocal": "powerlocal",
+  "AssumeAdminLocal": "adminlocal",
+  "AssumeReadLocal": "readlocal",
+  "AssumeBilling": "billing",
+  "AssumeS3FullAndReadOnlyLocal": "s3_full_and_ro_local"
+}
+window.users = {
+  "aws_users":
+{{ aws_users | to_nice_json }}
+}
+
+window.bastionAccountId = "{{ bastion_account.account_id }}"
+
+window.accounts = {
+  "subaccounts":
+{{subaccounts | to_nice_json }}
+}
+</script>
+
+<script>
+  let vars
+  let selectedUserName
+  let selectedRole
+  let selectedRegion
+
+  const crossAccountLinkList = new Set()
+  const assumeRoleList = new Set()
+  const awsConfigRoleList = new Set()
+
+  function addEntryToCrossAccountLinkList(crossAccountLinkList, accountId, accountName, remoteRole) {
+      crossAccountLinkList.add(
+          '<a href="https://signin.aws.amazon.com/switchrole?account=' +
+          accountId + '&roleName=' +
+          remoteRole + '&displayName=' +
+          accountName + '_' + remoteRole + '">' +
+          accountName + ' ' + remoteRole + '</a><br>'
+      )
+  }
+
+  function addEntryToAssumeroleList(assumeRoleList, accountId, accountName, remoteRole, userName) {
+      assumeRoleList.add(
+          '&nbsp;&nbsp;&nbsp;&nbsp;"' +
+          accountName + '-' + remoteRole +
+          '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' +
+          accountId +
+          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' +
+          bastionAccountId + ':mfa/' + userName +
+          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' +
+          remoteRole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}'
+      )
+  }
+
+  function addEntryToAwsConfigroleList(awsConfigRoleList, accountId, accountName, remoteRole, userName) {
+      const nameNoDots = accountName.replace(/\./g, "-")
+
+      awsConfigRoleList.add(
+          '[' +
+          nameNoDots + '-' +
+          remoteRole +
+          ']<br>source_profile = {{ organization.name }}-bastion<br>role_arn = arn:aws:iam::' +
+          accountId + ':role/' + remoteRole +
+          '<br>mfa_serial = arn:aws:iam::' +
+          bastionAccountId + ':mfa/' + userName +
+          '<br>region = ' + selectedRegion + '<br><br>'
+      )
+  }
+
+  document.write('<h2>URL for the Bastion AWS Console</h2>')
+  document.write('<a target="_blank" href="{{ bastion_account.console_url }}">Bastion Account Console</a><br/>')
+
+  if ( location.href.includes('?') ) {
+    vars = location.href.split('?')[1].split('&').map(str => str.split('=')).reduce(function(prev, v) {return Object.assign(prev, {[v[0]]: v[1]})}, {})
+    selectedUserName = vars.user
+    selectedRole = vars.role
+    selectedRegion = vars.region || 'eu-central-1'
+
+    if ( ! selectedUserName ) {
+      document.write('<b>Add query parameter user=your.aws.user to the URL<b>')
+      selectedUser = 'unknown'
+    }
+  } else {
+    document.write('<b>Add query parameter user=your.aws.user to the URL<b>')
+    selectedUserName = 'unknown'
+  }
+
+  const selectedUser = users.aws_users.find(
+    function(user) {
+      return user.name === selectedUserName
+    }
+  )
+
+  if ( selectedRole === 'admin') {
+      accounts.subaccounts.sort( (a, b) => a.name > b.name ).forEach(
+      function (value) {
+          const account = value.name
+          const account_id = value.account_id
+          const remoterole = selectedRole
+
+          addEntryToCrossAccountLinkList(crossAccountLinkList, account_id, account, remoterole)
+          addEntryToAssumeroleList(assumeRoleList, account_id, account, remoterole, selectedUserName)
+          addEntryToAwsConfigroleList(awsConfigRoleList, account_id, account, remoterole, selectedUserName)
+      })
+  } else {
+      // Add accounts for user.groups based access
+      // Remove the Admin group because it's "special"
+      const index = selectedUser.groups.indexOf("Admin");
+      if (index > -1) {
+          selectedUser.groups.splice(index, 1);
+      }
+
+      const groups = selectedUser.groups
+      const parsedGroups = groups.map(
+          function (groupString) {
+              const split = groupString.split('-')
+              return {role: split[0], account: split.slice(1).join('-')}
+          }
+      )
+
+      const matchingAccounts1 = accounts.subaccounts.map(
+          function (account) {
+              const matchingGroup = parsedGroups.find(
+                  function (group) {
+                      if ( account.name.indexOf(group.account) !== -1 ) {
+                          return group
+                      } else {
+                          return null
+                      }
+                  }
+              )
+              if (!matchingGroup) return null
+              return {
+                  ...account,
+                  role: matchingGroup.role, //?
+          }
+          }
+      ).filter(function(account) { return !!account })
+
+      const matchingAccounts2 = accounts.subaccounts.map(
+          function (account) {
+              const matchingGroup = parsedGroups.find(
+                  function (group) {
+                      if ( account.environment === group.account ) {
+                          return group
+                      } else {
+                          return null
+                      }
+                  }
+              )
+              if (!matchingGroup) return null
+              return {
+                  ...account,
+                  role: matchingGroup.role, //?
+          }
+          }
+      ).filter(function(account) { return !!account })
+
+      const matchingAccounts = matchingAccounts1.concat(matchingAccounts2)
+      console.log(matchingAccounts)
+
+      const string = JSON.stringify(matchingAccounts)
+      console.log(string)
+
+      matchingAccounts.sort( (a, b) => a.name> b.name ).forEach(
+          function (t) {
+              addEntryToCrossAccountLinkList(crossAccountLinkList, t.account_id, t.name, rolemapping[t.role])
+              addEntryToAssumeroleList(assumeRoleList, t.account_id, t.name, rolemapping[t.role], selectedUser.name)
+              addEntryToAwsConfigroleList(awsConfigRoleList, t.account_id, t.name, rolemapping[t.role], selectedUser.name)
+          }
+      )
+  }
+
+  // Add accounts for user.accounts based access
+  if ( selectedUser.accounts ) {
+      selectedUser.accounts.forEach(
+          function (account) {
+              accounts.subaccounts.forEach(
+                  function (subaccount) {
+                      if ( subaccount.name.match(RegExp(account.name))) {
+                          addEntryToCrossAccountLinkList(crossAccountLinkList, subaccount.account_id, subaccount.name, account.role)
+                          addEntryToAssumeroleList(assumeRoleList, subaccount.account_id, subaccount.name, account.role, selectedUser.name)
+                          addEntryToAwsConfigroleList(awsConfigRoleList, subaccount.account_id, subaccount.name, account.role, selectedUser.name)
+                      }
+                  }
+              )
+          }
+      )
+  }
+
+
+  document.write('<h2>AWS Cross Account links for ' + vars.user + '</h2><ul>')
+  crossAccountLinkList.forEach(
+      function (t) {
+          document.write('<li>' + t + '</li>')
+      }
+  )
+  document.write('</ul><br>')
+
+  document.write('<h2>aws-sts-assumerole config file for ' + vars.user + '</h2><br>')
+  document.write('<code>{<br>&nbsp;&nbsp;"assume_roles": {<br>')
+  let assumeRoleArray = Array.from(assumeRoleList)
+  assumeRoleArray.forEach(
+      function (t, index, array) {
+          if (index === array.length - 1)
+              document.write(t + '<br>')
+          else {
+              document.write(t + ',<br>')
+          }
+      }
+  )
+  document.write('&nbsp;&nbsp;}<br>}<br></code>')
+
+  document.write('<h2>~/.aws/credentials for ' + vars.user + '</h2><br><code>')
+  document.write('[{{ organization.name }}-bastion]<br/>')
+  document.write('region = eu-central-1<br/>')
+  document.write('aws_access_key_id = AKIAxxxxxxxxx<br/>')
+  document.write('aws_secret_access_key = xxxxxxxxxxxxxxxx<br/>')
+  document.write('<br/>')
+  let awsConfigRoleArray = Array.from(awsConfigRoleList)
+  awsConfigRoleArray.forEach(
+      function (t, index, array) {
+          document.write(t)
+      })
+  document.write('</code>')
+
+</script>
+</body>
+</html>

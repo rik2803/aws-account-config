@@ -102,6 +102,14 @@ aws_users:
   - name: "john.doe@acme.com"
     groups:
       - Admin
+    accounts_valid:
+      from: "2021-01-01T00:00:00Z"
+      until: "2021-06-30T23:59:59Z"
+    accounts:
+      - name: ".*prd.*"
+        role: "readlocal"
+      - name: ".*sandbox.*"
+        role: "adminlocal"
   - name: "bill.smith@acme.com"
     groups:
       - AssumeRead-acme.salesapp-prd
@@ -109,6 +117,11 @@ aws_users:
 ```
 
 ## Available `tags` to limit the scope of the execution
+
+### `create_aws_account_policy`
+
+Create the per-user IAM policy granting assumerole permissions for the
+configured subaccounts to the user, and attaches the policy to the user.
 
 ### `html`
 
