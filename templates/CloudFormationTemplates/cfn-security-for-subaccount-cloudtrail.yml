@@ -64,7 +64,7 @@ Resources:
       AlarmDescription: |
         Alarms when an API call is made to create, update or delete a Security Group.
       AlarmActions:
-        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+        - !ImportValue "{{ organization.name | title }}MonitoringSubaccount-MonitoringSNSTopic"
         - !Ref AlarmNotificationTopic
       MetricName: SecurityGroupEventCount
       Namespace: CloudTrailMetrics
@@ -92,7 +92,7 @@ Resources:
       AlarmDescription: |
         Alarms when an API call is made to create, update or delete a Network ACL.
       AlarmActions:
-#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+#        - !ImportValue "{{ organization.name | title }}MonitoringSubaccount-MonitoringSNSTopic"
         - !Ref AlarmNotificationTopic
       MetricName: NetworkAclEventCount
       Namespace: CloudTrailMetrics
@@ -121,7 +121,7 @@ Resources:
         Alarms when an API call is made to create, update or delete
         a Customer or Internet Gateway.
       AlarmActions:
-#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+#        - !ImportValue "{{ organization.name | title }}MonitoringSubaccount-MonitoringSNSTopic"
         - !Ref AlarmNotificationTopic
       MetricName: GatewayEventCount
       Namespace: CloudTrailMetrics
@@ -152,7 +152,7 @@ Resources:
         Alarms when an API call is made to create, update or delete a VPC,
         VPC peering connection or VPC connection to classic.
       AlarmActions:
-#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+#        - !ImportValue "{{ organization.name | title }}MonitoringSubaccount-MonitoringSNSTopic"
         - !Ref AlarmNotificationTopic
       MetricName: VpcEventCount
       Namespace: CloudTrailMetrics
@@ -181,7 +181,7 @@ Resources:
         Alarms when an API call is made to create, terminate, start,
         stop or reboot an EC2 instance.
       AlarmActions:
-#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+#        - !ImportValue "{{ organization.name | title }}MonitoringSubaccount-MonitoringSNSTopic"
         - !Ref AlarmNotificationTopic
       MetricName: EC2InstanceEventCount
       Namespace: CloudTrailMetrics
@@ -208,7 +208,7 @@ Resources:
         Alarms when an API call is made to create, terminate, start,
         stop or reboot a 4x or 8x-large EC2 instance.
       AlarmActions:
-#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+#        - !ImportValue "{{ organization.name | title }}MonitoringSubaccount-MonitoringSNSTopic"
         - !Ref AlarmNotificationTopic
       MetricName: EC2LargeInstanceEventCount
       Namespace: CloudTrailMetrics
@@ -236,7 +236,7 @@ Resources:
         Alarms when an API call is made to create, update or delete a CloudTrail trail,
         or to start or stop logging to a trail.
       AlarmActions:
-#         - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+#         - !ImportValue "{{ organization.name | title }}MonitoringSubaccount-MonitoringSNSTopic"
          - !Ref AlarmNotificationTopic
       MetricName: CloudTrailEventCount
       Namespace: CloudTrailMetrics
@@ -262,7 +262,7 @@ Resources:
       AlarmDescription: |
         Alarms when an unauthenticated API call is made to sign into the console.
       AlarmActions:
-#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+#        - !ImportValue "{{ organization.name | title }}MonitoringSubaccount-MonitoringSNSTopic"
         - !Ref AlarmNotificationTopic
       MetricName: ConsoleSignInFailureCount
       Namespace: CloudTrailMetrics
@@ -287,7 +287,7 @@ Resources:
       AlarmDescription: |
         Alarms when an unauthorized API call is made.
       AlarmActions:
-#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+#        - !ImportValue "{{ organization.name | title }}MonitoringSubaccount-MonitoringSNSTopic"
         - !Ref AlarmNotificationTopic
       MetricName: AuthorizationFailureCount
       Namespace: CloudTrailMetrics
@@ -317,7 +317,7 @@ Resources:
       AlarmDescription: |
         Alarms when an API call is made to change an IAM policy.
       AlarmActions:
-#        - !ImportValue "IxorMonitoringSubaccount-MonitoringSNSTopic"
+#        - !ImportValue "{{ organization.name | title }}MonitoringSubaccount-MonitoringSNSTopic"
         - !Ref AlarmNotificationTopic
       MetricName: IAMPolicyEventCount
       Namespace: CloudTrailMetrics
