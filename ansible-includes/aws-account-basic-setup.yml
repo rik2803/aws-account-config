@@ -183,7 +183,7 @@
         security_token: "{{ assumed_role.sts_creds.session_token }}"
         name: "{{ item.name }}"
         state: "{{ item.state | default('present') }}"
-        managed_policies:
+        managed_policy:
           - "AWSAccountAccessFor-{{ item.name }}"
       with_items: "{{ aws_users }}"
       when: aws_users is defined
