@@ -130,7 +130,7 @@
         retries: 300
         with_items: "{{ async_createsecurityserviceaccountscloudformationstack.results | default([]) }}"
 
-    when: security_account is defined
+    when: security_account is defined and bastion_account.service_accounts is defined
     tags: [ 'security', 'security_subaccount', 'security_subaccount_service_accounts' ]
 
 
