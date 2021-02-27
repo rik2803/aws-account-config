@@ -83,6 +83,7 @@
           state: "present"
           disable_rollback: false
           template_url: "{{ presign.stdout }}"
+    when: bastion_account.service_accounts is defined
     tags:
       - bastion
       - bastion_create_service_accounts
