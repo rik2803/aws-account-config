@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+{% set serial = ecr_deploy_users_config.accesskey_serial %}
+{% for ecr_user in ecr_deploy_users_config.users %}
+{%   set username = "ecr-" + ecr_user.name %}
+{%   set cfn_username = username | replace('-', ' ') | replace('.', ' ') | title | replace(' ', '') %}
+{%   set envvar_username = username | replace('-', '_') | replace('.', '_') | upper %}
+{%   set assumerole_arn = ecr_user.assumerole_arn | default('arn:aws:iam::' + tooling_account.account_id + ':role/' + cfn_username) %}
+  {{ cfn_username }}:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: "{{ username }}"
+      Policies:
+        - PolicyName: AssumeRole
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: StsAssumerole
+                Effect: Allow
+                Action: sts:AssumeRole
+                Resource: "{{ assumerole_arn }}"
+      Tags:
+        - Key: "serial"
+          Value: "{{ serial }}"
+        - Key: "userType"
+          Value: "Codeartifact"
+
+  Key{{ cfn_username }}:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref {{ cfn_username }}
+      Serial: {{ serial }}
+
+  SSMAccessKeyCA{{ cfn_username }}:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: "AWS_ACCESS_KEY_ID for ECR deploy user {{ username }}"
+      Name: "ACCESS_KEY_ID_{{ envvar_username }}"
+      Value: !Ref Key{{ cfn_username }}
+      Type: String
+
+  SSMSecretKeyCA{{ cfn_username }}:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: "AWS_SECRET_ACCESS_KEY for ECR deploy user {{ username }}"
+      Name: "SECRET_ACCESS_KEY_{{ envvar_username }}"
+      Value: !GetAtt Key{{ cfn_username }}.SecretAccessKey
+      Type: String
+
+{% endfor %}

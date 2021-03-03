@@ -1,4 +1,12 @@
 ---
+  - name: Read config file for ECR deploy users
+    include_vars:
+      file: "{{ config_basedir }}/ecr_deploy_users.yml"
+      name: "ecr_deploy_users_config"
+    ignore_errors: yes
+    tags:
+      - always
+
   - name: Block for setup on the toolingsubaccount
     block:
       - name: Assume role for tooling subaccount
@@ -26,3 +34,31 @@
         with_items: "{{ aws_local_regions }}"
 
     when: "tooling_account is defined and tooling_account.account_id is defined"
+
+  - name: Create roles for ecr deploy user accounts on the bastion account to assume
+    block:
+      - name: "Create ecr deploy users from config in {{ config_basedir }}/ecr_deploy_users.yml"
+        block:
+          - name: Create CloudFormation stack to create roles to be assumed by ecr deploy user accounts
+            template:
+              src: "CloudFormationTemplates/cfn-setup-ecr-deploy-user-roles-for-tooling.yml"
+              dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-ecr-deploy-user-roles-for-tooling.yml"
+          - name: Put CFN template for ecr deploy user roles on s3
+            shell: |
+              aws s3 cp "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-ecr-deploy-user-roles-for-tooling.yml" \
+                        "s3://{{ organization.name }}-{{ organization.account_id }}-cfn-templates/cfn-{{ organization.name }}-setup-ecr-deploy-user-roles-for-tooling.yml"
+          - name: Get presigned URL for the ecr deploy user roles template on S3
+            shell: |
+              aws s3 presign "s3://{{ organization.name }}-{{ organization.account_id }}-cfn-templates/cfn-{{ organization.name }}-setup-ecr-deploy-user-roles-for-tooling.yml"
+            register: presign
+          - name: Deploy CloudFormation stack to create ecr deploy user roles to the tooling account
+            cloudformation:
+              aws_access_key: "{{ tooling_assumed_role.sts_creds.access_key }}"
+              aws_secret_key: "{{ tooling_assumed_role.sts_creds.secret_key }}"
+              security_token: "{{ tooling_assumed_role.sts_creds.session_token }}"
+              stack_name: "{{ cfn_org_name }}SecurityEcrDeployUserRoles"
+              state: "present"
+              disable_rollback: false
+              template_url: "{{ presign.stdout }}"
+
+    when: "tooling_account is defined and tooling_account.account_id is defined and ecr_deploy_users_config.users is defined"

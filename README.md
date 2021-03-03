@@ -118,6 +118,26 @@ aws_users:
 
 ## Available `tags` to limit the scope of the execution
 
+### `bastion_create_service_accounts`
+
+Create all _Service Accounts_ on the bastion account.
+
+### `bastion_create_codeartifact_accounts`
+
+Create all CodeArtifact deploy users (read-only access) on the bastion account.
+
+### `bastion_create_ecr_deploy_users`
+
+Create all ECR deploy users (read-only access) on the bastion account. This user wil have permissions
+to assume a role on the tooling account with permissions on a predefined set of ECR repo's only.
+
+### `tooling`
+
+* Allow new AWS accounts to access certain resources on the tooling account
+* Create roles in the tooling account for fine-grained access to ECR repositories for
+  ECR deploy users defined in the Bastion account (with the tag
+  `bastion_create_ecr_deploy_users`)
+
 ### `create_aws_account_policy`
 
 Create the per-user IAM policy granting assumerole permissions for the

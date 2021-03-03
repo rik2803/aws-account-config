@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+{% set serial = ecr_deploy_users_config.accesskey_serial %}
+{% for ecr_user in ecr_deploy_users_config.users %}
+{%   set username = "ecr-" + ecr_user.name %}
+{%   set cfn_username = username | replace('-', ' ') | replace('.', ' ') | title | replace(' ', '') %}
+{%   set envvar_username = username | replace('-', '_') | replace('.', '_') | upper %}
+  EcrReadOnlyFor{{ cfn_username }}:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: |
+        Role to be assumed by the ecr deploy user for deployment ouside BB/AWS
+      RoleName: "{{ cfn_username }}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: arn:aws:iam::{{ bastion_account.account_id }}:root
+            Action: sts:AssumeRole
+      Policies:
+{%   for ecr_repo in ecr_user.ecr_repo_list %}
+        - PolicyName: "{{ ecr_repo | replace('-', ' ') | replace('_', ' ') | replace('/', ' ') | replace('.', ' ') | title | replace(' ', '') }}"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "ecr:DescribeImageScanFindings"
+                  - "ecr:GetLifecyclePolicyPreview"
+                  - "ecr:GetDownloadUrlForLayer"
+                  - "ecr:BatchGetImage"
+                  - "ecr:DescribeImages"
+                  - "ecr:BatchCheckLayerAvailability"
+                  - "ecr:GetRepositoryPolicy"
+                  - "ecr:GetLifecyclePolicy"
+                Resource: "arn:aws:ecr:*:{{ tooling_account.account_id }}:repository/{{ ecr_repo }}"
+              - Effect: Allow
+                Action:
+                  - "ecr:GetRegistryPolicy"
+                  - "ecr:DescribeRegistry"
+                  - "ecr:GetAuthorizationToken"
+                Resource: "*"
+{%   endfor %}
+      Tags:
+        - Key: "serial"
+          Value: "{{ serial }}"
+        - Key: "userType"
+          Value: "EcrDeployUser"
+
+{% endfor %}

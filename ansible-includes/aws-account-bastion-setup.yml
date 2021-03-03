@@ -1,8 +1,15 @@
 ---
-  - name: Read repo to permissions config
+  - name: Read config file for CodeArtifact deploy users
     include_vars:
       file: "{{ config_basedir }}/codeartifact.yml"
       name: "codeartifact_config"
+    ignore_errors: yes
+    tags:
+      - always
+  - name: Read config file for ECR deploy users
+    include_vars:
+      file: "{{ config_basedir }}/ecr_deploy_users.yml"
+      name: "ecr_deploy_users_config"
     ignore_errors: yes
     tags:
       - always
@@ -11,7 +18,7 @@
       role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
       role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
     register: assumed_role
-    tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users', 'bastion_custom_groups', 'bastion_create_service_accounts', 'bastion_create_codeartifact_accounts' ]
+    tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'create_users', 'bastion_custom_groups', 'bastion_create_service_accounts', 'bastion_create_codeartifact_accounts', 'bastion_create_ecr_deploy_users' ]
     check_mode: no
 
   - name: Create S3 bucket to hold cloudformation templates on the organization account
@@ -45,7 +52,7 @@
             shell: |
               aws s3 presign "s3://{{ organization.name }}-{{ organization.account_id }}-cfn-templates/cfn-{{ organization.name }}-codeartifactaccounts-for-bastion.yml"
             register: presign
-          - name: Deploy CloudFormation stack to create service accounts for all subaccounts to the bastion account
+          - name: Deploy CloudFormation stack to create codeartifact deploy user accounts to the bastion account
             cloudformation:
               aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
               aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
@@ -58,6 +65,36 @@
       - bastion
       - bastion_create_codeartifact_accounts
     when: "codeartifact_config.users is defined"
+
+  - name: Create ecr deploy user accounts
+    block:
+      - name: "Create ecr deploy users from config in {{ config_basedir }}/ecr_deploy_users.yml"
+        block:
+          - name: Create CloudFormation stack to create ecr deploy user accounts
+            template:
+              src: "CloudFormationTemplates/cfn-ecraccounts-for-bastion.yml"
+              dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-ecraccounts-for-bastion.yml"
+          - name: Put CFN template for ecr deploy user accounts on s3
+            shell: |
+              aws s3 cp "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-ecraccounts-for-bastion.yml" \
+                        "s3://{{ organization.name }}-{{ organization.account_id }}-cfn-templates/cfn-{{ organization.name }}-ecraccounts-for-bastion.yml"
+          - name: Get presigned URL for the ecr deploy user accounts template on S3
+            shell: |
+              aws s3 presign "s3://{{ organization.name }}-{{ organization.account_id }}-cfn-templates/cfn-{{ organization.name }}-ecraccounts-for-bastion.yml"
+            register: presign
+          - name: Deploy CloudFormation stack to create ecr deploy user accounts to the bastion account
+            cloudformation:
+              aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+              aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+              security_token: "{{ assumed_role.sts_creds.session_token }}"
+              stack_name: "{{ cfn_org_name }}SecurityEcrDeployUserAccounts"
+              state: "present"
+              disable_rollback: false
+              template_url: "{{ presign.stdout }}"
+    tags:
+      - bastion
+      - bastion_create_ecr_deploy_users
+    when: "ecr_deploy_users_config.users is defined"
 
 
   - name: Create service accounts for all subaccounts
