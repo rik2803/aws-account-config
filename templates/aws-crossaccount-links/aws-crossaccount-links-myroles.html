@@ -126,9 +126,13 @@ window.accounts = {
   } else {
       // Add accounts for user.groups based access
       // Remove the Admin group because it's "special"
-      const index = selectedUser.groups.indexOf("Admin");
-      if (index > -1) {
-          selectedUser.groups.splice(index, 1);
+      if ( selectedUser.groups ) {
+          const index = selectedUser.groups.indexOf("Admin");
+          if (index > -1) {
+              selectedUser.groups.splice(index, 1);
+          } else {
+              selectedUser.groups = [];
+          }
       } else {
           selectedUser.groups = [];
       }
