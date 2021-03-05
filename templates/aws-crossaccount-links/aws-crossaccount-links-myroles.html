@@ -129,6 +129,8 @@ window.accounts = {
       const index = selectedUser.groups.indexOf("Admin");
       if (index > -1) {
           selectedUser.groups.splice(index, 1);
+      } else {
+          selectedUser.groups = [];
       }
 
       const groups = selectedUser.groups
