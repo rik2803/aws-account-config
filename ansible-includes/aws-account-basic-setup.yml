@@ -234,7 +234,7 @@
         security_token: "{{ assumed_role.sts_creds.session_token }}"
         iam_type: user
         name: "{{ item.name }}"
-        groups: "{{ item.groups + default_groups }}"
+        groups: "{{ (item.groups | default([])) + (default_groups | default([])) }}"
         state: update
       with_items: "{{ aws_users }}"
       when: aws_users is defined
