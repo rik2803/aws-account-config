@@ -25,8 +25,10 @@ ansible-playbook aws-account-setup.yml \
 
 ## How it works?
 
-* Retrieve the SSM Secrets with the `client_id` and `secret_id` for OAuth2
-  authentication with BB from the organization's bastion account
+* Retrieve the SSM Secrets with the `bb_client_id` and `bb_secret_id` for OAuth2
+  authentication with BB from the organization's bastion account. See
+  [here](https://support.atlassian.com/bitbucket-cloud/docs/use-oauth-on-bitbucket-cloud/)
+  for instructions to create the OAuth consumer.
 * The config repository for the managed AWS organization should have a file named
   `sa_bb_config.yml` in de `BitbucketRepoConfigs` directory. This file looks like this:
 
