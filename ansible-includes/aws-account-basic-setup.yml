@@ -100,7 +100,6 @@
       with_items: "{{ async_createentitiesgroups.results }}"
       tags: [ 'bastion' ]
 
-
     - name: Create default groups in the bastion account
       iam_group:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
@@ -268,7 +267,6 @@
       with_items: "{{ async_createassumeroleenvpolicies.results }}"
       tags: [ 'bastion' ]
 
-
     - name: Create policies for Assume<Role>-<entity> and assign to the respective groups
       iam_policy:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
@@ -395,7 +393,7 @@
         AWS_DEFAULT_REGION: "{{ assumed_role.region | default('eu-central-1') }}"
       tags: [ 'bastion', 'passwordpolicy', 'accountalias' ]
 
-    ### Assumes role for setting the password policy on the subaccounts
+    ### SUBACCOUNTS: Assumes role for setting the password policy on the subaccounts
     - name: Assume role for subaccounts
       sts_assume_role:
         role_arn: "arn:aws:iam::{{ item.account_id }}:role/{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
@@ -404,7 +402,7 @@
       with_items:
         - "{{ subaccounts }}"
       when: "bastion_account.account_id != item.account_id and ( subaccount_limit == 'all' or item.name.startswith(subaccount_limit) )"
-      tags: [ 'subaccounts', 'passwordpolicy', 'accountalias', 'createroles', 'organization', 'keypair' ]
+      tags: [ 'subaccounts', 'passwordpolicy', 'accountalias', 'createroles', 'organization', 'keypair', 'servicelinkedrole', 'ssm_parameters' ]
 
     - name: Set password policy rules on the sub accounts
       command: >
@@ -461,6 +459,21 @@
       with_items: "{{ assumed_role_subaccount_single.results }}"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       tags: [ 'subaccounts', 'servicelinkedrole' ]
+      failed_when: false
+
+    - name: Create SSM parameters on subaccounts if any
+      community.aws.aws_ssm_parameter_store:
+        name: "{{ item.1.name }}"
+        description: "Added by aws-account-config"
+        string_type: "{{ item.1.string_type | default('SecureString') }}"
+        value: "{{ item.1.value }}"
+        state: "{{ item.1.state | default('present') }}"
+        aws_access_key: "{{ item.0.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.0.sts_creds.secret_key }}"
+        security_token: "{{ item.0.sts_creds.session_token }}"
+      loop: "{{ assumed_role_subaccount_single.results | subelements('item.ssm_parameters', skip_missing=True) }}"
+      when: "bastion_account.account_id != item.0.item.account_id and ( subaccount_limit == 'all' or item.0.item.name.startswith(subaccount_limit) )"
+      tags: [ 'subaccounts', 'ssm_parameters' ]
       failed_when: false
 
     ### Create *Local policies
