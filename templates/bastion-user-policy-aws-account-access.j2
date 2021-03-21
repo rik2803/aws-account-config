@@ -32,8 +32,8 @@
         "NumericLessThan": {
           "aws:MultiFactorAuthAge": "43200"
         },
-        "DateGreaterThan": { "aws:CurrentTime": "{{ item.accounts_valid.from | default('2099-12-31T23:59:59Z') }}" },
-        "DateLessThan": { "aws:CurrentTime": "{{ item.accounts_valid.until | default('2010-01-01T00:00:00Z') }}" }
+        "DateGreaterThan": { "aws:CurrentTime": "{{ item.accounts_valid.from | default('2010-01-01T00:00:00Z') }}" },
+        "DateLessThan": { "aws:CurrentTime": "{{ item.accounts_valid.until | default('2099-12-31T23:59:59Z') }}" }
       }
     },
     {
