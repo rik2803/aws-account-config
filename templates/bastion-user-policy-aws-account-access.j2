@@ -1,6 +1,6 @@
 {% set account_list = [] %}
-{% if current_time < item.accounts_valid.until | default('2010-01-01T00:00:00Z') %}
-{%   if current_time > item.accounts_valid.from | default('2099-12-31T23:59:59Z') %}
+{% if current_time < item.accounts_valid.until | default('2099-12-31T23:59:59Z') %}
+{%   if current_time > item.accounts_valid.from | default('2010-01-01T00:00:00Z') %}
 {%     for account in item.accounts | default([]) %}
 {%       for subaccount in subaccounts | default([]) -%}
 {%         if subaccount.name | regex_search(account.name) %}{{ account_list.append("arn:aws:iam::" + subaccount.account_id + ":role/" + account.role) }}{% endif %}
