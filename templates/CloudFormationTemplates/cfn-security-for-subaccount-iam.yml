@@ -48,11 +48,11 @@ Resources:
             Resource:
               - "*"
 
-  IxorSSMSessionPolicy:
+  {{ organization.name | title }}SSMSessionPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: "SSMSession"
-      Path: "/IxorSSM/"
+      Path: "/{{ organization.name | title }}SSM/"
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
