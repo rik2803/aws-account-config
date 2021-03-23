@@ -213,7 +213,7 @@
       with_items: "{{ aws_users }}"
       when: aws_users is defined
       loop_control:
-        pause: 1
+        pause: 2
       register: async_createawsusers_inline_policy_timeboxed
       async: 7200
       poll: 0
