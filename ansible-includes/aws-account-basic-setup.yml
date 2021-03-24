@@ -162,7 +162,8 @@
       with_items: "{{ aws_users }}"
       when: aws_users is defined
       loop_control:
-        pause: 1
+        pause: 2
+      no_log: True
       register: async_createawsusers
       async: 7200
       poll: 0
@@ -226,6 +227,7 @@
       with_items: "{{ async_createawsusers_inline_policy_timeboxed.results }}"
       tags: [ 'bastion', 'create_users' ]
 
+    ## TODO: Make this async? Is kins of slow)
     - name: Assign user to groups in the bastion account
       iam:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
