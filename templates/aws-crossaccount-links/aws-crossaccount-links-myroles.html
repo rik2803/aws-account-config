@@ -18,6 +18,7 @@
 <body>
 <script>
 window.rolemapping = {{ aws_role_mapping | to_nice_json }}
+window.aws_roles = {{ aws_roles | to_nice_json }}
 
 window.users = {
   "aws_users":
@@ -52,7 +53,26 @@ window.accounts = {
       )
   }
 
+  function getRemoteRoleSessionDuration(remoteRole) {
+      let maxSessionDuration = 3600;
+      for (const aws_role of window.aws_roles) {
+          console.error(remoteRole);
+          console.error(aws_role);
+          console.error(aws_role['name']);
+
+          if (aws_role['name'] === remoteRole) {
+              if (aws_role['max_session_duration']) {
+                  maxSessionDuration = aws_role['max_session_duration'];
+              } else {
+                  maxSessionDuration = 3600;
+              }
+          }
+      }
+      return maxSessionDuration;
+  }
+
   function addEntryToAssumeroleList(assumeRoleList, accountId, accountName, remoteRole, userName) {
+      maxSessionDuration = getRemoteRoleSessionDuration(remoteRole);
       assumeRoleList.add(
           '&nbsp;&nbsp;&nbsp;&nbsp;"' +
           accountName + '-' + remoteRole +
@@ -61,7 +81,9 @@ window.accounts = {
           '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' +
           bastionAccountId + ':mfa/' + userName +
           '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' +
-          remoteRole + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}'
+          remoteRole +
+          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"max_session_duration": "' +
+          maxSessionDuration + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}'
       )
   }
 
