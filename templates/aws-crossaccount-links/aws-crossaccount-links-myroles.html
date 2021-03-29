@@ -17,16 +17,8 @@
 
 <body>
 <script>
-window.rolemapping = {
-  "AssumePower": "power",
-  "AssumeAdmin": "admin",
-  "AssumeRead": "read",
-  "AssumePowerLocal": "powerlocal",
-  "AssumeAdminLocal": "adminlocal",
-  "AssumeReadLocal": "readlocal",
-  "AssumeBilling": "billing",
-  "AssumeS3FullAndReadOnlyLocal": "s3_full_and_ro_local"
-}
+window.rolemapping = {{ aws_role_mapping | to_nice_json }}
+
 window.users = {
   "aws_users":
 {{ aws_users | to_nice_json }}
@@ -36,7 +28,7 @@ window.bastionAccountId = "{{ bastion_account.account_id }}"
 
 window.accounts = {
   "subaccounts":
-{{subaccounts | to_nice_json }}
+{{ subaccounts | to_nice_json }}
 }
 </script>
 
