@@ -22,7 +22,7 @@
         role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
       register: assumed_role
-      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'accountalias', 'create_users', 'create_aws_account_policy', 'bastion_groups', 'bastion_custom_groups', 'bastion_create_service_accounts' ]
+      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'accountalias', 'create_users', 'create_aws_account_policy', 'bastion_groups', 'assign_users_to_groups', 'bastion_custom_groups', 'bastion_create_service_accounts' ]
       check_mode: no
 
     - name: Create billing group in the bastion account for billing access to organization account
@@ -232,8 +232,8 @@
       with_items: "{{ async_createawsusers_inline_policy_timeboxed.results }}"
       tags: [ 'bastion', 'create_users' ]
 
-    ## TODO: Make this async? Is kins of slow)
-    - name: Assign user to groups in the bastion account
+    ## TODO: Make this async? Is kind of slow)
+    - name: "Assign user to groups in the bastion account (non-Admin users)"
       iam:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
@@ -243,8 +243,22 @@
         groups: "{{ (item.groups | default([])) + (default_groups | default([])) }}"
         state: update
       with_items: "{{ aws_users }}"
-      when: aws_users is defined
-      tags: [ 'bastion', 'create_users' ]
+      when: "aws_users is defined and 'Admin' not in item.groups"
+      tags: [ 'bastion', 'create_users', 'assign_users_to_groups' ]
+
+    ## TODO: Make this async? Is kind of slow)
+    - name: "Assign user to groups in the bastion account (Admin users)"
+      iam:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: user
+        name: "{{ item.name }}"
+        groups: "{{ item.groups | default([]) }}"
+        state: update
+      with_items: "{{ aws_users }}"
+      when: "aws_users is defined and 'Admin' in item.groups"
+      tags: [ 'bastion', 'create_users', 'assign_users_to_groups' ]
 
     ### There might be environments (i.e. tst) that have no associated account, that's OK
     - name: Create policies for Assume<Role>-<env> and assign to the respective groups
