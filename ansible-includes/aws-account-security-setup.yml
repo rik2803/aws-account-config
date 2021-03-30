@@ -52,22 +52,6 @@
 #    when: security_account is defined
 #    tags: [ 'security', 'security_guardduty' ]
 
-  ### Add bastion account to subaccounts list of dicts
-  - name: Create a fact to contain bastion config to be added to subaccounts
-    set_fact:
-      bastion_account_local:
-        name: "{{ bastion_account.name }}"
-        entity: "ixor"
-        account_id: "{{ bastion_account.account_id }}"
-        email: "{{ bastion_account.email }}"
-        environment: "prd"
-    tags:
-      - always
-  - name: Add bastion account info to subaccounts list
-    set_fact:
-      subaccounts_and_bastion: "{{ subaccounts + [ bastion_account_local ] }}"
-    tags:
-      - always
   ### Create CFN templates from AWS templates
   - name: Set-up credentials
     block:

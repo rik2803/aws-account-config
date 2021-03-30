@@ -28,38 +28,32 @@ window.users = {
 window.bastionAccountId = "{{ bastion_account.account_id }}"
 
 window.accounts = {
-  "subaccounts":
-{{ subaccounts | to_nice_json }}
+  "subaccounts": [ {% for subaccount in subaccounts %}{ name: "{{ subaccount.name }}", account_id: "{{ subaccount.account_id }}"},{% endfor %}]
 }
 </script>
 
 <script>
-  let vars
-  let selectedUserName
-  let selectedRole
-  let selectedRegion
+  let vars;
+  let selectedUserName;
+  let selectedRole;
+  let selectedRegion;
 
-  const crossAccountLinkList = new Set()
-  const assumeRoleList = new Set()
-  const awsConfigRoleList = new Set()
+  const crossAccountLinks = {};
+  const assumeRoleList = new Set();
+  const awsConfigRoleList = new Set();
 
-  function addEntryToCrossAccountLinkList(crossAccountLinkList, accountId, accountName, remoteRole) {
-      crossAccountLinkList.add(
+  function addEntryToCrossAccountLinks(crossAccountLinks, accountId, accountName, remoteRole) {
+      crossAccountLinks[accountName + ' ' + remoteRole] =
           '<a href="https://signin.aws.amazon.com/switchrole?account=' +
           accountId + '&roleName=' +
           remoteRole + '&displayName=' +
           accountName + '_' + remoteRole + '">' +
-          accountName + ' ' + remoteRole + '</a><br>'
-      )
+          accountName + ' ' + remoteRole + '</a><br>';
   }
 
   function getRemoteRoleSessionDuration(remoteRole) {
       let maxSessionDuration = 3600;
       for (const aws_role of window.aws_roles) {
-          console.error(remoteRole);
-          console.error(aws_role);
-          console.error(aws_role['name']);
-
           if (aws_role['name'] === remoteRole) {
               if (aws_role['max_session_duration']) {
                   maxSessionDuration = aws_role['max_session_duration'];
@@ -133,7 +127,7 @@ window.accounts = {
           const account_id = value.account_id
           const remoterole = selectedRole
 
-          addEntryToCrossAccountLinkList(crossAccountLinkList, account_id, account, remoterole)
+          addEntryToCrossAccountLinks(crossAccountLinks, account_id, account, remoterole)
           addEntryToAssumeroleList(assumeRoleList, account_id, account, remoterole, selectedUserName)
           addEntryToAwsConfigroleList(awsConfigRoleList, account_id, account, remoterole, selectedUserName)
       })
@@ -198,14 +192,10 @@ window.accounts = {
       ).filter(function(account) { return !!account })
 
       const matchingAccounts = matchingAccounts1.concat(matchingAccounts2)
-      console.log(matchingAccounts)
-
-      const string = JSON.stringify(matchingAccounts)
-      console.log(string)
 
       matchingAccounts.sort( (a, b) => a.name> b.name ).forEach(
           function (t) {
-              addEntryToCrossAccountLinkList(crossAccountLinkList, t.account_id, t.name, rolemapping[t.role])
+              addEntryToCrossAccountLinks(crossAccountLinks, t.account_id, t.name, rolemapping[t.role])
               addEntryToAssumeroleList(assumeRoleList, t.account_id, t.name, rolemapping[t.role], selectedUser.name)
               addEntryToAwsConfigroleList(awsConfigRoleList, t.account_id, t.name, rolemapping[t.role], selectedUser.name)
           }
@@ -219,7 +209,7 @@ window.accounts = {
               accounts.subaccounts.forEach(
                   function (subaccount) {
                       if ( subaccount.name.match(RegExp(account.name))) {
-                          addEntryToCrossAccountLinkList(crossAccountLinkList, subaccount.account_id, subaccount.name, account.role)
+                          addEntryToCrossAccountLinks(crossAccountLinks, subaccount.account_id, subaccount.name, account.role)
                           addEntryToAssumeroleList(assumeRoleList, subaccount.account_id, subaccount.name, account.role, selectedUser.name)
                           addEntryToAwsConfigroleList(awsConfigRoleList, subaccount.account_id, subaccount.name, account.role, selectedUser.name)
                       }
@@ -231,9 +221,9 @@ window.accounts = {
 
 
   document.write('<h2>AWS Cross Account links for ' + vars.user + '</h2><ul>')
-  crossAccountLinkList.forEach(
+  Object.keys(crossAccountLinks).sort().forEach(
       function (t) {
-          document.write('<li>' + t + '</li>')
+          document.write('<li>' + crossAccountLinks[t] + '</li>')
       }
   )
   document.write('</ul><br>')
