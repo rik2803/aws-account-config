@@ -22,30 +22,8 @@
         role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
       register: assumed_role
-      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'accountalias', 'create_users', 'create_aws_account_policy', 'bastion_custom_groups', 'bastion_create_service_accounts' ]
+      tags: [ 'bastion_grouppolicy', 'bastion', 'passwordpolicy', 'accountalias', 'create_users', 'create_aws_account_policy', 'bastion_groups', 'bastion_custom_groups', 'bastion_create_service_accounts' ]
       check_mode: no
-
-    - name: Create groups in the bastion account
-      iam_group:
-        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
-        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
-        security_token: "{{ assumed_role.sts_creds.session_token }}"
-        name: "{{ item[0].name }}-{{ item[1].name }}"
-        state: present
-      with_nested:
-        - "{{ aws_groups }}"
-        - "{{ subaccounts }}"
-      register: async_creategroups
-      async: 7200
-      poll: 0
-      tags: [ 'bastion' ]
-    - name: Wait for async_creategroups tasks to finish
-      async_status: jid={{ item.ansible_job_id }}
-      register: async_creategroups_jobs
-      until: async_creategroups_jobs.finished
-      retries: 300
-      with_items: "{{ async_creategroups.results }}"
-      tags: [ 'bastion' ]
 
     - name: Create billing group in the bastion account for billing access to organization account
       iam_group:
@@ -54,51 +32,78 @@
         security_token: "{{ assumed_role.sts_creds.session_token }}"
         name: "AssumeBilling-{{ organization.name | default('org') }}"
         state: present
-      tags: [ 'bastion' ]
+      tags: [ 'bastion', 'bastion_groups' ]
 
-    - name: Create default groups for the environments in the bastion account
-      iam_group:
-        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
-        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
-        security_token: "{{ assumed_role.sts_creds.session_token }}"
-        name: "{{ item[0] }}-{{ item[1] }}"
-        state: present
-      with_nested:
-        - "{{ group_names }}"
-        - "{{ environments | default([]) }}"
-      register: async_createdefaultgroups
-      async: 7200
-      poll: 0
-      tags: [ 'bastion' ]
-    - name: Wait for async_createdefaultgroups tasks to finish
-      async_status: jid={{ item.ansible_job_id }}
-      register: async_createdefaultgroups_jobs
-      until: async_createdefaultgroups_jobs.finished
-      retries: 300
-      with_items: "{{ async_createdefaultgroups.results }}"
-      tags: [ 'bastion' ]
+    - name: "Block for env/entity/account groups, can be skipped with property skip_account_group_creation"
+      block:
+        - name: Create groups in the bastion account
+          iam_group:
+            aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+            aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+            security_token: "{{ assumed_role.sts_creds.session_token }}"
+            name: "{{ item[0].name }}-{{ item[1].name }}"
+            state: present
+          with_nested:
+            - "{{ aws_groups }}"
+            - "{{ subaccounts }}"
+          register: async_creategroups
+          async: 7200
+          poll: 0
+          tags: [ 'bastion' ]
+        - name: Wait for async_creategroups tasks to finish
+          async_status: jid={{ item.ansible_job_id }}
+          register: async_creategroups_jobs
+          until: async_creategroups_jobs.finished
+          retries: 300
+          with_items: "{{ async_creategroups.results }}"
+          tags: [ 'bastion', 'bastion_groups' ]
 
-    - name: Create default groups for the entities in the bastion account
-      iam_group:
-        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
-        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
-        security_token: "{{ assumed_role.sts_creds.session_token }}"
-        name: "{{ item[0] }}-{{ item[1] }}"
-        state: present
-      with_nested:
-        - "{{ group_names }}"
-        - "{{ entities | default([]) }}"
-      register: async_createentitiesgroups
-      async: 7200
-      poll: 0
-      tags: [ 'bastion' ]
-    - name: Wait for async_createentitiesgroups tasks to finish
-      async_status: jid={{ item.ansible_job_id }}
-      register: async_createentitiesgroups_jobs
-      until: async_createentitiesgroups_jobs.finished
-      retries: 300
-      with_items: "{{ async_createentitiesgroups.results }}"
-      tags: [ 'bastion' ]
+        - name: Create default groups for the environments in the bastion account
+          iam_group:
+            aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+            aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+            security_token: "{{ assumed_role.sts_creds.session_token }}"
+            name: "{{ item[0] }}-{{ item[1] }}"
+            state: present
+          with_nested:
+            - "{{ group_names }}"
+            - "{{ environments | default([]) }}"
+          register: async_createdefaultgroups
+          async: 7200
+          poll: 0
+          tags: [ 'bastion' ]
+        - name: Wait for async_createdefaultgroups tasks to finish
+          async_status: jid={{ item.ansible_job_id }}
+          register: async_createdefaultgroups_jobs
+          until: async_createdefaultgroups_jobs.finished
+          retries: 300
+          with_items: "{{ async_createdefaultgroups.results }}"
+          tags: [ 'bastion', 'bastion_groups' ]
+
+        - name: Create default groups for the entities in the bastion account
+          iam_group:
+            aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+            aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+            security_token: "{{ assumed_role.sts_creds.session_token }}"
+            name: "{{ item[0] }}-{{ item[1] }}"
+            state: present
+          with_nested:
+            - "{{ group_names }}"
+            - "{{ entities | default([]) }}"
+          register: async_createentitiesgroups
+          async: 7200
+          poll: 0
+          tags: [ 'bastion' ]
+        - name: Wait for async_createentitiesgroups tasks to finish
+          async_status: jid={{ item.ansible_job_id }}
+          register: async_createentitiesgroups_jobs
+          until: async_createentitiesgroups_jobs.finished
+          retries: 300
+          with_items: "{{ async_createentitiesgroups.results }}"
+          tags: [ 'bastion', 'bastion_groups' ]
+
+      when: "skip_account_group_creation is not defined or not skip_account_group_creation"
+      tags: ['bastion_groups']
 
     - name: Create default groups in the bastion account
       iam_group:
@@ -110,7 +115,7 @@
       with_items:
         - Admin
         - ManageYourOwnUser
-      tags: [ 'bastion' ]
+      tags: [ 'bastion', 'bastion_groups' ]
 
     - name: Create custom groups in the bastion account
       iam_group:
@@ -121,7 +126,7 @@
         state: present
       with_items: "{{ custom_groups }}"
       when: "custom_groups is defined"
-      tags: [ 'bastion', 'bastion_custom_groups' ]
+      tags: [ 'bastion', 'bastion_custom_groups', 'bastion_groups' ]
 
     - name: Create managed policy for user based on user.accounts properties
       iam_managed_policy:
