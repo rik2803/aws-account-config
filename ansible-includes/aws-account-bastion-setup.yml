@@ -1,14 +1,14 @@
 ---
   - name: Read config file for CodeArtifact deploy users
     include_vars:
-      file: "{{ config_basedir }}/codeartifact.yml"
+      file: "{{ config_basedir }}/deploy_users/codeartifact.yml"
       name: "codeartifact_config"
     ignore_errors: yes
     tags:
       - always
   - name: Read config file for ECR deploy users
     include_vars:
-      file: "{{ config_basedir }}/ecr_deploy_users.yml"
+      file: "{{ config_basedir }}/deploy_users/ecr_deploy_users.yml"
       name: "ecr_deploy_users_config"
     ignore_errors: yes
     tags:
