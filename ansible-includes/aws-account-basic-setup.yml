@@ -139,7 +139,7 @@
       with_items: "{{ aws_users }}"
       when: aws_users is defined
       loop_control:
-        pause: 1
+        pause: 2
       register: async_create_account_access_managed_policy
       async: 7200
       poll: 0
@@ -193,7 +193,7 @@
       with_items: "{{ aws_users }}"
       when: aws_users is defined
       loop_control:
-        pause: 1
+        pause: 2
       register: async_attach_managed_policies_to_user
       async: 7200
       poll: 0
