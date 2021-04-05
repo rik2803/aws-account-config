@@ -229,7 +229,19 @@ window.accounts = {
   document.write('</ul><br>')
 
   document.write('<h2>aws-sts-assumerole config file for ' + vars.user + '</h2><br>')
-  document.write('<code>{<br>&nbsp;&nbsp;"assume_roles": {<br>')
+{% if codeartifact_config is defined %}
+  document.write('<code>{<br>')
+  document.write('&nbsp;&nbsp;"codeartifact": [<br>')
+  document.write('&nbsp;&nbsp;&nbsp;&nbsp;{<br>')
+  document.write('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"id": "{{ codeartifact_config.id }}",<br/>')
+  document.write('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"username": "{{ codeartifact_config.username }}",<br/>')
+  document.write('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"domain_owner": "{{ codeartifact_config.domain_owner }}",<br/>')
+  document.write('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"domain": "{{ codeartifact_config.domain }}",<br/>')
+  document.write('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"profile": "{{ codeartifact_config.profile }}"<br/>')
+  document.write('&nbsp;&nbsp;&nbsp;&nbsp;}<br>')
+  document.write('&nbsp;&nbsp;]<br>')
+{% endif %}
+  document.write('&nbsp;&nbsp;"assume_roles": {<br>')
   let assumeRoleArray = Array.from(assumeRoleList)
   assumeRoleArray.forEach(
       function (t, index, array) {
