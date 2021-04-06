@@ -1,7 +1,7 @@
 ---
   - name: Read config file for ECR deploy users
     include_vars:
-      file: "{{ config_basedir }}/ecr_deploy_users.yml"
+      file: "{{ config_basedir }}/deploy_users/ecr_deploy_users.yml"
       name: "ecr_deploy_users_config"
     ignore_errors: yes
     tags:
@@ -37,7 +37,7 @@
 
   - name: Create roles for ecr deploy user accounts on the bastion account to assume
     block:
-      - name: "Create ecr deploy users from config in {{ config_basedir }}/ecr_deploy_users.yml"
+      - name: "Create ecr deploy users from config in {{ config_basedir }}/deploy_users/ecr_deploy_users.yml"
         block:
           - name: Create CloudFormation stack to create roles to be assumed by ecr deploy user accounts
             template:

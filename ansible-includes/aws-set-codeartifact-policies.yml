@@ -1,13 +1,13 @@
 ---
 - name: Check if CodeArtifact config exists
   stat:
-    path: "{{ config_basedir }}/codeartifact.yml"
+    path: "{{ config_basedir }}/deploy_users/codeartifact.yml"
   register: codeartifact_config_file
   failed_when: false
   changed_when: false
   check_mode: no
 
-- name: "Tasks to perform when {{ config_basedir }}/codeartifact.yml exists"
+- name: "Tasks to perform when {{ config_basedir }}/deploy_users/codeartifact.yml exists"
   when: codeartifact_config_file.stat.exists
   block:
       - name: Assume role for tooling subaccount
@@ -28,7 +28,7 @@
 
       - name: Read CodeArtifact config
         include_vars:
-          file: "{{ config_basedir }}/codeartifact.yml"
+          file: "{{ config_basedir }}/deploy_users/codeartifact.yml"
           name: "codeartifact"
 
       - name: Set domain policy

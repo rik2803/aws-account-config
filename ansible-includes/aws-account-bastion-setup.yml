@@ -38,7 +38,7 @@
 
   - name: Create codeartifact accounts
     block:
-      - name: "Create code artifact from config in {{ config_basedir }}/codeartifact.yml"
+      - name: "Create code artifact from config in {{ config_basedir }}/deploy_users/codeartifact.yml"
         block:
           - name: Create CloudFormation stack to create CodeartifactAccounts
             template:
@@ -68,7 +68,7 @@
 
   - name: Create ecr deploy user accounts
     block:
-      - name: "Create ecr deploy users from config in {{ config_basedir }}/ecr_deploy_users.yml"
+      - name: "Create ecr deploy users from config in {{ config_basedir }}/deploy_users/ecr_deploy_users.yml"
         block:
           - name: Create CloudFormation stack to create ecr deploy user accounts
             template:
