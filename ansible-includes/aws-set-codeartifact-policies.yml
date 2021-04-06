@@ -21,10 +21,18 @@
           src: "codeartifact-domain-policy.json.j2"
           dest: "{{ generated_files_dir | default('generated-files') }}/codeartifact-domain-policy.json"
 
+      - name: Linter check cloudformation stack CodeArtifatct domain
+        shell:
+          cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/codeartifact-domain-policy.json"
+
       - name: Create Policy file for CodeArtifatct repository
         template:
           src: "codeartifact-repository-policy.json.j2"
           dest: "{{ generated_files_dir | default('generated-files') }}/codeartifact-repository-policy.json"
+
+      - name: Linter check cloudformation stack CodeArtifatct repository
+        shell:
+          cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/codeartifact-repository-policy.json"
 
       - name: Read CodeArtifact config
         include_vars:

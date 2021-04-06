@@ -44,6 +44,9 @@
             template:
               src: "CloudFormationTemplates/cfn-codeartifactaccounts-for-bastion.yml"
               dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-codeartifactaccounts-for-bastion.yml"
+          - name: Linter check cloudformation stack CodeartifactAccounts
+            shell:
+              cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-codeartifactaccounts-for-bastion.yml"
           - name: Put CFN template for codeartifact accounts on s3
             shell: |
               aws s3 cp "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-codeartifactaccounts-for-bastion.yml" \
@@ -74,6 +77,9 @@
             template:
               src: "CloudFormationTemplates/cfn-ecraccounts-for-bastion.yml"
               dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-ecraccounts-for-bastion.yml"
+          - name: Linter check cloudformation stack ecr deploy user accounts
+            shell:
+              cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-ecraccounts-for-bastion.yml"
           - name: Put CFN template for ecr deploy user accounts on s3
             shell: |
               aws s3 cp "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-ecraccounts-for-bastion.yml" \
@@ -103,6 +109,9 @@
         template:
           src: "CloudFormationTemplates/cfn-serviceaccounts-for-bastion.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-serviceaccounts-for-bastion.yml"
+      - name: Linter check cloudformation stack ServiceAccounts for all subaccounts
+        shell:
+          cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-serviceaccounts-for-bastion.yml"
       - name: Put CFN template for service accounts on s3
         shell: |
           aws s3 cp "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-serviceaccounts-for-bastion.yml" \
