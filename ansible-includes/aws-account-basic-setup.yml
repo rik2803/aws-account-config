@@ -155,6 +155,31 @@
           with_items: "{{ async_createassumeroleorgpolicies.results }}"
           tags: [ 'bastion', 'bastion_groups' ]
 
+        - name: Assign policies to groups in the bastion account
+          iam_policy:
+            aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+            aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+            security_token: "{{ assumed_role.sts_creds.session_token }}"
+            iam_type: group
+            iam_name: "{{ item[0].name }}-{{ item[1].name }}"
+            policy_name: "AssumeRole"
+            policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-one.json.j2') }}"
+            state: present
+          with_nested:
+            - "{{ aws_groups }}"
+            - "{{ subaccounts }}"
+          register: async_assignpoliciestogroups
+          async: 7200
+          poll: 0
+          tags: [ 'bastion_grouppolicy', 'bastion', 'bastion_groups' ]
+        - name: Wait for async_assignpoliciestogroups tasks to finish
+          async_status: jid={{ item.ansible_job_id }}
+          register: async_assignpoliciestogroups_jobs
+          until: async_assignpoliciestogroups_jobs.finished
+          retries: 300
+          with_items: "{{ async_assignpoliciestogroups.results }}"
+          tags: [ 'bastion_grouppolicy', 'bastion', 'bastion_groups' ]
+
       when: "skip_account_group_creation is not defined or not skip_account_group_creation"
       tags: ['bastion_groups']
 
@@ -361,31 +386,6 @@
         policy_json: "{{ lookup('template', 'bastion-group-policy-billing.json.j2') }}"
         state: present
       tags: [ 'bastion' ]
-
-    - name: Assign policies to groups in the bastion account
-      iam_policy:
-        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
-        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
-        security_token: "{{ assumed_role.sts_creds.session_token }}"
-        iam_type: group
-        iam_name: "{{ item[0].name }}-{{ item[1].name }}"
-        policy_name: "AssumeRole"
-        policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-one.json.j2') }}"
-        state: present
-      with_nested:
-        - "{{ aws_groups }}"
-        - "{{ subaccounts }}"
-      register: async_assignpoliciestogroups
-      async: 7200
-      poll: 0
-      tags: [ 'bastion_grouppolicy', 'bastion' ]
-    - name: Wait for async_assignpoliciestogroups tasks to finish
-      async_status: jid={{ item.ansible_job_id }}
-      register: async_assignpoliciestogroups_jobs
-      until: async_assignpoliciestogroups_jobs.finished
-      retries: 300
-      with_items: "{{ async_assignpoliciestogroups.results }}"
-      tags: [ 'bastion_grouppolicy', 'bastion' ]
 
     - name: Assign AdministratorAccess policies to the Admin group in the bastion account
       iam_group:
