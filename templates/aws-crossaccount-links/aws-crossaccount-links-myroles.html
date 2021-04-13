@@ -229,8 +229,8 @@ window.accounts = {
   document.write('</ul><br>')
 
   document.write('<h2>aws-sts-assumerole config file for ' + vars.user + '</h2><br>')
-{% if codeartifact_config is defined %}
   document.write('<code>{<br>')
+{% if codeartifact_config is defined %}
   document.write('&nbsp;&nbsp;"codeartifact": [<br>')
   document.write('&nbsp;&nbsp;&nbsp;&nbsp;{<br>')
   document.write('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"id": "{{ codeartifact_config.id }}",<br/>')
