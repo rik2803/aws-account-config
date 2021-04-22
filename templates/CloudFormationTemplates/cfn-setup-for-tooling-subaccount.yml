@@ -70,6 +70,7 @@ Resources:
           ]
         }
 
+{% if tooling_account.skip_user_creation is not defined or not tooling_account.skip_user_creation %}
   S3LambdaFunctionStoreUser:
     Type: AWS::IAM::User
     DependsOn:
@@ -84,6 +85,7 @@ Resources:
     Properties:
       UserName:
         !Ref S3LambdaFunctionStoreUser
+{% endif %}
 
   {{ cfn_tooling_name_prefix }}S3LambdaFunctionStoreFullAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -265,10 +267,12 @@ Resources:
               - arn:aws:s3:::{{ bucket_name }}/*
 
 {% if item == 'eu-central-1' %}
+{%   if tooling_account.skip_user_creation is not defined or not tooling_account.skip_user_creation %}
 Outputs:
   AccessKeyS3LambdaFunctionStoreUser:
     Value:
       !Ref KeyS3LambdaFunctionStoreUser
   SecretKeyS3LambdaFunctionStoreUser:
     Value: !GetAtt KeyS3LambdaFunctionStoreUser.SecretAccessKey
+{%   endif %}
 {% endif %}
