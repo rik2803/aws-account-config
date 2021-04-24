@@ -126,6 +126,12 @@ Create all _Service Accounts_ on the bastion account.
 
 Create all CodeArtifact deploy users (read-only access) on the bastion account.
 
+These users will have permissions to assume the role `arn:aws:iam::123456789012:role/CodeArtifactReadOnly`,
+that's a role on the tooling account (where the CodeArtifact repository lives).
+
+The role `CodeArtifactReadOnly` on the _tooling_ account is not created by `aws-account-config`, make sure
+you create it to make things work.
+
 ### `bastion_create_ecr_deploy_users`
 
 Create all ECR deploy users (read-only access) on the bastion account. This user wil have permissions
@@ -220,7 +226,7 @@ ansible-playbook aws-account-setup.yml \
 
 ### Apply cross-account policy to _CodeArtifact_ domains and repositories
 
-The _CodeArtifact
+TODO
 
 ### Set all service account related BB pipeline variables in the repository
 
