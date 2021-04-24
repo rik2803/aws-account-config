@@ -87,6 +87,22 @@
       tags:
         - always
 
+    - name: "Read user config from config_basedir/aws_users.d"
+      include_vars:
+        dir: "{{ config_basedir }}/aws_users.d"
+        extensions:
+          - 'yml'
+          - 'yaml'
+        name: aws_users2
+      failed_when: false
+      tags:
+        - always
+    - name: "Add aws_users2 to aws_users"
+      set_fact:
+        aws_users: "{{ (aws_users | default([])) + ((aws_users2 | default({})).values() | list) }}"
+      tags:
+        - always
+
     - name: Print all subaccount names
       debug:
         msg: "{{ item.name }}"
@@ -94,7 +110,7 @@
       tags: [ 'accountlist' ]
     - name: Import basic account setup tasks
       import_tasks: ansible-includes/aws-account-basic-setup.yml
-      tags: [ 'basic' ]
+      tags: [ 'basic', 'userlist' ]
     - name: Import security setup tasks
       import_tasks: ansible-includes/aws-account-security-setup.yml
       tags: [ 'security' ]

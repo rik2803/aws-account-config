@@ -5,6 +5,12 @@
         group_names: "{{ aws_groups | map(attribute='name') | list }}"
       tags: [ 'always' ]
 
+    - name: Print all aws_users names
+      debug:
+        msg: "{{ item.name }}"
+      with_items: "{{ aws_users }}"
+      tags: [ 'userlist' ]
+
     ### Specific Bastion Setup
     - name: Block for specific Bastion Setup
       block:
