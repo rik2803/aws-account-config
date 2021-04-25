@@ -441,7 +441,7 @@
     - name: "Set account alias - step 1: use temp name to avoid failure when same alias is already set"
       command: >
         aws iam create-account-alias
-            --account-alias "{{ item.item.name | replace('.', '-') }}-temp"
+            --account-alias "{{ item.item.alias | default(item.item.name) | replace('.', '-') }}-temp"
       environment:
         AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
@@ -453,7 +453,7 @@
     - name: "Set account alias - step 2: use final alias name"
       command: >
         aws iam create-account-alias
-            --account-alias "{{ item.item.name | replace('.', '-') }}"
+            --account-alias "{{ item.item.alias | default(item.item.name) | replace('.', '-') }}"
       environment:
         AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
