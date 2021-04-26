@@ -32,4 +32,5 @@ declare -a all_tags=(
   'ssm_parameters:Provision SSM parameters on all accounts'
   'subaccounts'
   'tooling'
+  'bastion_create_ecr_deploy_users+tooling:'
 )
