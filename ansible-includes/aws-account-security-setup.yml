@@ -67,9 +67,9 @@
     tags: [ 'security', 'security_guardduty', 'security_subaccount', 'security_subaccount_service_accounts' ]
 
   ### This section creates a Service Account CloudFormation Stack on all accounts
-  - name: Block for Service Account security setup on the subaccounts
+  - name: "Block for Service Account security setup on the subaccounts"
     block:
-      - name: "Does the account have a config file, if not use default.yml"
+      - name: "Does the account have a ServiceAccount config file, if not use default.yml"
         stat:
           path: "{{ config_basedir }}/ServiceAccountRoles/{{ item.item.name }}.yml"
         register: stat_sa_config
@@ -127,11 +127,12 @@
 ### This section creates a security CloudFormation Stack on all accounts
   - name: Block for security setup on the subaccounts
     block:
-      - name: Create CFN template from Ansible template for the security setup on the subaccounts
+      - name: "Create CFN template from Ansible template for the AWS Config setup on the subaccounts"
         template:
-          src: "CloudFormationTemplates/cfn-security-for-subaccount.yml"
-          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-for-subaccount-{{ item.item.account_id }}.yml"
+          src: "CloudFormationTemplates/cfn-security-for-subaccount-aws-config.yml"
+          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-for-subaccount-aws-config-{{ item.item.account_id }}.yml"
         with_items: "{{ security_assumed_role_subaccount_single.results }}"
+        when: "skip_aws_config is undefined or not skip_aws_config"
 
       - name: Linter check for the security setup on the subaccounts
         shell: |
@@ -150,6 +151,7 @@
           src: "CloudFormationTemplates/cfn-security-for-subaccount-cloudtrail.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-cloudtrail-for-subaccount-{{ item.item.account_id }}.yml"
         with_items: "{{ security_assumed_role_subaccount_single.results }}"
+        when: "skip_aws_cloudtrail is undefined or not skip_aws_cloudtrail"
 
       ### Stack for all regions in aws_local_regions
       - name: Create/Update Security CloudFormation Stack on all accounts in all regions in "{{ aws_local_regions }}"
@@ -161,13 +163,15 @@
           stack_name: "{{ cfn_org_name }}SecuritySubaccount"
           state: "present"
           disable_rollback: false
-          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-for-subaccount-{{ item[0].item.account_id }}.yml"
+          template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-for-subaccount-aws-config-{{ item[0].item.account_id }}.yml"
         with_nested:
           - "{{ security_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
         register: async_createsecuritycloudformationstack
         async: 7200
         poll: 0
+        when: "skip_aws_config is undefined or not skip_aws_config"
+
 
       ### IAM Stack for home region (eu-central-1)
       - name: Create/Update IAM Security CloudFormation Stack on all accounts in (home) region eu-central-1
@@ -202,6 +206,7 @@
         register: async_createsecuritycloudtrailcloudformationstack
         async: 7200
         poll: 0
+        when: "skip_aws_cloudtrail is undefined or not skip_aws_cloudtrail"
 
       ### Wait
       - name: Wait for async_createsecuritycloudformationstack tasks to finish
@@ -210,6 +215,7 @@
         until: async_createsecuritycloudformationstack_jobs.finished
         retries: 300
         with_items: "{{ async_createsecuritycloudformationstack.results | default([]) }}"
+        when: "skip_aws_config is undefined or not skip_aws_config"
 
       - name: Wait for async_createsecurityiamcloudformationstack tasks to finish
         async_status: jid={{ item.ansible_job_id }}
@@ -224,6 +230,8 @@
         until: async_createsecuritycloudtrailcloudformationstack_jobs.finished
         retries: 300
         with_items: "{{ async_createsecuritycloudtrailcloudformationstack.results | default([]) }}"
+        when: "skip_aws_cloudtrail is undefined or not skip_aws_cloudtrail"
+
 
     when: security_account is defined
     tags: [ 'security', 'security_subaccount' ]

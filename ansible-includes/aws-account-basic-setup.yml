@@ -5,6 +5,12 @@
         group_names: "{{ aws_groups | map(attribute='name') | list }}"
       tags: [ 'always' ]
 
+    - name: Print all aws_users names
+      debug:
+        msg: "{{ item.name }}"
+      with_items: "{{ aws_users }}"
+      tags: [ 'userlist' ]
+
     ### Specific Bastion Setup
     - name: Block for specific Bastion Setup
       block:
@@ -295,22 +301,11 @@
         state: "{{ item.state | default('present') }}"
         policy_json: "{{ lookup('template', 'templates/bastion-user-policy-assume-timeboxed-role.j2') }}"
       with_items: "{{ aws_users }}"
-      when: aws_users is defined
+      when: "aws_users is defined and (item.state is not defined or item.state != 'absent')"
       loop_control:
         pause: 2
-      register: async_createawsusers_inline_policy_timeboxed
-      async: 7200
-      poll: 0
-      tags: [ 'bastion', 'create_users' ]
-    - name: Wait for async_createawsusers_inline_policy_timeboxed tasks to finish
-      async_status: jid={{ item.ansible_job_id }}
-      register: async_createawsusers_jobs_inline_policy_timeboxed
-      until: async_createawsusers_jobs_inline_policy_timeboxed.finished
-      retries: 300
-      with_items: "{{ async_createawsusers_inline_policy_timeboxed.results }}"
       tags: [ 'bastion', 'create_users' ]
 
-    ## TODO: Make this async? Is kind of slow)
     - name: "Assign user to groups in the bastion account (non-Admin users)"
       iam:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
@@ -321,10 +316,9 @@
         groups: "{{ (item.groups | default([])) + (default_groups | default([])) }}"
         state: update
       with_items: "{{ aws_users }}"
-      when: "aws_users is defined and (item.groups is not defined or 'Admin' not in item.groups)"
+      when: "aws_users is defined and (item.groups is not defined or 'Admin' not in item.groups) and (item.state is not defined or item.state != 'absent')"
       tags: [ 'bastion', 'create_users', 'assign_users_to_groups' ]
 
-    ## TODO: Make this async? Is kind of slow)
     - name: "Assign user to groups in the bastion account (Admin users)"
       iam:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
@@ -335,7 +329,7 @@
         groups: "{{ item.groups | default([]) }}"
         state: update
       with_items: "{{ aws_users }}"
-      when: "aws_users is defined and item.groups is defined and 'Admin' in item.groups"
+      when: "aws_users is defined and item.groups is defined and 'Admin' in item.groups and (item.state is not defined or item.state != 'absent')"
       tags: [ 'bastion', 'create_users', 'assign_users_to_groups' ]
 
     - name: Create Custom policies for assign to the respective groups
@@ -447,7 +441,7 @@
     - name: "Set account alias - step 1: use temp name to avoid failure when same alias is already set"
       command: >
         aws iam create-account-alias
-            --account-alias "{{ item.item.name | replace('.', '-') }}-temp"
+            --account-alias "{{ item.item.alias | default(item.item.name) | replace('.', '-') }}-temp"
       environment:
         AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
@@ -459,7 +453,7 @@
     - name: "Set account alias - step 2: use final alias name"
       command: >
         aws iam create-account-alias
-            --account-alias "{{ item.item.name | replace('.', '-') }}"
+            --account-alias "{{ item.item.alias | default(item.item.name) | replace('.', '-') }}"
       environment:
         AWS_ACCESS_KEY_ID: "{{ item.sts_creds.access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
