@@ -201,7 +201,6 @@ only performed for that account.
 
 Only run the `guardduty` tasks.
 
-
 ## Available `--extra-vars`
 
 ### `config-file`

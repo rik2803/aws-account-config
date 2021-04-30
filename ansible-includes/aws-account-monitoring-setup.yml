@@ -10,6 +10,9 @@
         template:
           src: "CloudFormationTemplates/cfn-monitoring-for-subaccount.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-bastion-account.yml"
+      - name: Linter check cloudformation stack monitoring setup on the bastion account
+        shell:
+          cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-bastion-account.yml"
       - name: Create/Update Monitoring CloudFormation Stack on the bastion account
         cloudformation:
           aws_access_key: "{{ monitoring_assumed_role_bastion.sts_creds.access_key }}"
@@ -38,6 +41,13 @@
         template:
           src: "CloudFormationTemplates/cfn-monitoring-for-subaccount.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}-{{ item[1] }}.yml"
+        with_nested:
+          - "{{ monitoring_assumed_role_subaccount_single.results }}"
+          - "{{ aws_local_regions }}"
+
+      - name: Linter check cloudformation stack monitoring setup on the subaccounts
+        shell:
+          cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}-{{ item[1] }}.yml"
         with_nested:
           - "{{ monitoring_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
