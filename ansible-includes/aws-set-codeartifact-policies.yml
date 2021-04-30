@@ -24,6 +24,7 @@
       - name: Linter check cloudformation stack CodeArtifatct domain
         shell:
           cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/codeartifact-domain-policy.json"
+      tags: [ 'linter_check' ]
 
       - name: Create Policy file for CodeArtifatct repository
         template:
@@ -33,6 +34,7 @@
       - name: Linter check cloudformation stack CodeArtifatct repository
         shell:
           cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/codeartifact-repository-policy.json"
+        tags: [ 'linter_check' ]
 
       - name: Read CodeArtifact config
         include_vars:

@@ -25,6 +25,7 @@
         shell:
           cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}-{{ item }}.yml"
         with_items: "{{ aws_local_regions }}"
+        tags: [ 'linter_check' ]
 
       - name: Create/Update Tooling CloudFormation Stack on tooling accounts
         cloudformation:
@@ -52,6 +53,7 @@
             shell:
               cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-ecr-deploy-user-roles-for-tooling.yml"
             with_items: "{{ aws_local_regions }}"
+            tags: [ 'linter_check' ]
           - name: Put CFN template for ecr deploy user roles on s3
             shell: |
               aws s3 cp "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-ecr-deploy-user-roles-for-tooling.yml" \
