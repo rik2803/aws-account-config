@@ -201,6 +201,9 @@ only performed for that account.
 
 Only run the `guardduty` tasks.
 
+### `linter_check`
+
+Skip the execution of the `linter check` while running the playbook.
 
 ## Available `--extra-vars`
 
