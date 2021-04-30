@@ -13,8 +13,6 @@
       - name: Linter check cloudformation stack monitoring setup on the bastion account
         shell:
           cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-bastion-account.yml"
-        tags: [ 'linter_check' ]
-
       - name: Create/Update Monitoring CloudFormation Stack on the bastion account
         cloudformation:
           aws_access_key: "{{ monitoring_assumed_role_bastion.sts_creds.access_key }}"
@@ -53,7 +51,6 @@
         with_nested:
           - "{{ monitoring_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
-        tags: [ 'linter_check' ]
 
       - name: Create/Update Monitoring CloudFormation Stack on all accounts
         cloudformation:
