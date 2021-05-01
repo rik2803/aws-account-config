@@ -21,8 +21,7 @@ window.rolemapping = {{ aws_role_mapping | to_nice_json }}
 window.aws_roles = {{ aws_roles | to_nice_json }}
 
 window.users = {
-  "aws_users":
-{{ aws_users | to_nice_json }}
+  "aws_users": [ {% for user in aws_users %}{ name: "{{ user.name }}", accounts: {{ user.accounts  }},{% if user.groups is defined %}groups: {{ user.groups }},{% endif %}},{% endfor %}]
 }
 
 window.bastionAccountId = "{{ bastion_account.account_id }}"
