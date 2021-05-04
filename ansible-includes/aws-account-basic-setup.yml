@@ -660,18 +660,15 @@
       no_log: True
       tags: [ 'subaccounts', 'createroles', 'billing' ]
 
-
     ### create html file with cross-account urls
     - name: Create html file with cross-account urls
       block:
-        - name: create html file
-          template:
-            src: aws-crossaccount-links/aws-crossaccount-links.html
-            dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config') }}/{{ org }}.html"
-        - name: create html file
-          template:
-            src: aws-crossaccount-links/aws-crossaccount-links-table.html
-            dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config') }}/{{ org }}-table.html"
+#        - name: debug
+#          debug:
+#            msg: "{{ subaccounts }}"
+        - name: debug
+          debug:
+            msg: "{{ bastion_account }}"
         - name: create html file
           template:
             src: aws-crossaccount-links/aws-crossaccount-links-myroles.html
