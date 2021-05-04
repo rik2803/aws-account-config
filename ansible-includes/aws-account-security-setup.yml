@@ -89,6 +89,11 @@
         with_items: "{{ stat_sa_config.results }}"
         when: "not item.stat.exists"
 
+      - name: "Linter check of Ansible template for the ServiceAccounts security setup on the subaccounts"
+        shell: |
+          cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.item.name }}.yml"
+        with_items: "{{ stat_sa_config.results }}"
+
       ### ServiceAccounts Stack for home region (eu-central-1)
       - name: Create/Update ServiceAccounts Security CloudFormation Stack on all accounts in (home) region eu-central-1
         cloudformation:
@@ -127,6 +132,11 @@
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-for-subaccount-aws-config-{{ item.item.account_id }}.yml"
         with_items: "{{ security_assumed_role_subaccount_single.results }}"
         when: "skip_aws_config is undefined or not skip_aws_config"
+
+      - name: Linter check for the security setup on the subaccounts
+        shell: |
+          cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.item.name }}.yml"
+        with_items: "{{ stat_sa_config.results }}"
 
       - name: Create CFN template from Ansible template for the IAM security setup on the subaccounts
         template:
