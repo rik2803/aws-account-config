@@ -663,9 +663,6 @@
     ### create html file with cross-account urls
     - name: Create html file with cross-account urls
       block:
-#        - name: debug
-#          debug:
-#            msg: "{{ subaccounts }}"
         - name: debug
           debug:
             msg: "{{ bastion_account }}"
@@ -673,6 +670,10 @@
           template:
             src: aws-crossaccount-links/aws-crossaccount-links-myroles.html
             dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config') }}/{{ org }}-myroles.html"
+        - name: create html file
+          template:
+            src: aws-crossaccount-links/aws-accounts.html
+            dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config') }}/{{ org }}-accounts.html"
         - name: Check if a deploy script exists for the organization
           stat:
             path: "html-deploy/{{ org }}-html-deploy.bash"
@@ -685,3 +686,4 @@
             bash ./html-deploy/{{ org }}-html-deploy.bash
           when: "deployscript.stat.exists"
       tags: [ 'html', 'create_users' ]
+
