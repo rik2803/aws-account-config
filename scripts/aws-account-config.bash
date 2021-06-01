@@ -15,7 +15,7 @@ declare -a all_tags=(
   'codeartifact'
   'create_aws_account_policy'
   'create_users:Create users on the bastion account'
-  'createroles'
+  'createroles:Create roles on subaccounts that can be assumed from the bastino account'
   'html'
   'keypair'
   'monitoring'
