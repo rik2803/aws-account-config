@@ -43,7 +43,7 @@ window.accounts = {
 
   function addEntryToCrossAccountLinks(crossAccountLinks, accountId, accountName, remoteRole) {
       crossAccountLinks[accountName + ' ' + remoteRole] =
-          '<a href="https://signin.aws.amazon.com/switchrole?account=' +
+          '<a target="_blank" href="https://signin.aws.amazon.com/switchrole?account=' +
           accountId + '&roleName=' +
           remoteRole + '&displayName=' +
           accountName + '_' + remoteRole + '">' +

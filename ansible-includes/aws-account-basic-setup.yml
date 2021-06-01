@@ -562,6 +562,29 @@
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
+    - name: Create the RdsPerformanceInsightsAccess policy with region restrictions
+      iam_managed_policy:
+        aws_access_key: "{{ item.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+        security_token: "{{ item.sts_creds.session_token }}"
+        policy_name: "RdsPerformanceInsightsAccess"
+        policy: "{{ lookup('template', 'RdsPerformanceInsightsAccess.json.j2') }}"
+        state: present
+      with_items: "{{ assumed_role_subaccount_single.results }}"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
+      register: async_RdsPerformanceInsightsAccess
+      async: 7200
+      poll: 0
+      tags: [ 'subaccounts', 'createroles', 'organization' ]
+    - name: Wait for async_RdsPerformanceInsightsAccess tasks to finish
+      async_status: jid={{ item.ansible_job_id }}
+      register: async_RdsPerformanceInsightsAccess_jobs
+      until: async_RdsPerformanceInsightsAccess_jobs.finished
+      retries: 300
+      with_items: "{{ async_RdsPerformanceInsightsAccess.results | default([]) }}"
+      when: "item.ansible_job_id is defined"
+      tags: [ 'subaccounts', 'createroles', 'organization' ]
+
     ### This assumes #aws_roles time a role per account, because these will be used in the
     ### a loop to create all roles on all subaccounts.
     - name: Assume role for subaccounts
@@ -663,9 +686,6 @@
     ### create html file with cross-account urls
     - name: Create html file with cross-account urls
       block:
-#        - name: debug
-#          debug:
-#            msg: "{{ subaccounts }}"
         - name: debug
           debug:
             msg: "{{ bastion_account }}"
@@ -673,6 +693,10 @@
           template:
             src: aws-crossaccount-links/aws-crossaccount-links-myroles.html
             dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config') }}/{{ org }}-myroles.html"
+        - name: create html file
+          template:
+            src: aws-crossaccount-links/aws-accounts.html
+            dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config') }}/{{ org }}-accounts.html"
         - name: Check if a deploy script exists for the organization
           stat:
             path: "html-deploy/{{ org }}-html-deploy.bash"
@@ -685,3 +709,4 @@
             bash ./html-deploy/{{ org }}-html-deploy.bash
           when: "deployscript.stat.exists"
       tags: [ 'html', 'create_users' ]
+
