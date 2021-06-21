@@ -39,6 +39,7 @@ window.accounts = {
 
   const crossAccountLinks = {};
   const assumeRoleList = new Set();
+  const assumeRoleListTimeboxedAccess = new Set();
   const awsConfigRoleList = new Set();
 
   function addEntryToCrossAccountLinks(crossAccountLinks, accountId, accountName, remoteRole) {
@@ -69,14 +70,11 @@ window.accounts = {
       assumeRoleList.add(
           '&nbsp;&nbsp;&nbsp;&nbsp;"' +
           accountName + '-' + remoteRole +
-          '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' +
-          accountId +
-          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' +
-          bastionAccountId + ':mfa/' + userName +
-          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' +
-          remoteRole +
-          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"max_session_duration": "' +
-          maxSessionDuration + '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}'
+          '": {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_profile": "{{ organization.name }}-bastion",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_account": "' + accountId +
+          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_mfa_arn": "arn:aws:iam::' + bastionAccountId + ':mfa/' + userName +
+          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"aws_role": "' + remoteRole +
+          '",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"max_session_duration": "' +  maxSessionDuration +
+          '"<br>&nbsp;&nbsp;&nbsp;&nbsp;}'
       )
   }
 
@@ -118,6 +116,16 @@ window.accounts = {
       return user.name === selectedUserName
     }
   )
+
+  // For timeboxed access - all subaccounts should be added
+  accounts.subaccounts.sort( (a, b) => a.name > b.name ).forEach(
+      function (value) {
+          const account = value.name
+          const account_id = value.account_id
+          const remoterole = selectedRole
+
+          addEntryToAssumeroleList(assumeRoleListTimeboxedAccess, account_id, account, selectedUserName + '-timeboxed-role', selectedUserName)
+      })
 
   if ( selectedRole === 'admin') {
       accounts.subaccounts.sort( (a, b) => a.name > b.name ).forEach(
@@ -243,6 +251,13 @@ window.accounts = {
   document.write('&nbsp;&nbsp;"assume_roles": {<br>')
   let assumeRoleArray = Array.from(assumeRoleList)
   assumeRoleArray.forEach(
+      function (t, index, array) {
+          document.write(t + ',<br>')
+      }
+  )
+
+  let assumeRoleArrayTimeboxedAccess = Array.from(assumeRoleListTimeboxedAccess)
+  assumeRoleArrayTimeboxedAccess.forEach(
       function (t, index, array) {
           if (index === array.length - 1)
               document.write(t + '<br>')
