@@ -1,5 +1,5 @@
 ---
-- name: Apply configuration to all AWS accounts in an organization
+- name: "Setup BB Pipeline variables"
   hosts: localhost
   gather_facts: false
 
