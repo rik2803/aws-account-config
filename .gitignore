@@ -7,4 +7,5 @@ kov*html
 dstudio*html
 .idea
 generated-files*/*
+html/*
 *-html-deploy.bash
