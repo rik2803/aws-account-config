@@ -689,14 +689,19 @@
         - name: debug
           debug:
             msg: "{{ bastion_account }}"
+        - name: "Create ./html dir to hold generated html files"
+          ansible.builtin.file:
+            path: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config/html') }}"
+            state: directory
+            mode: '0755'
         - name: create html file
           template:
             src: aws-crossaccount-links/aws-crossaccount-links-myroles.html
-            dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config') }}/{{ org }}-myroles.html"
+            dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config/html') }}/{{ org }}-myroles.html"
         - name: create html file
           template:
             src: aws-crossaccount-links/aws-accounts.html
-            dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config') }}/{{ org }}-accounts.html"
+            dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config/html') }}/{{ org }}-accounts.html"
         - name: Check if a deploy script exists for the organization
           stat:
             path: "html-deploy/{{ org }}-html-deploy.bash"

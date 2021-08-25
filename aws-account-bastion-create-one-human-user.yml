@@ -1,0 +1,202 @@
+---
+- name: "Setup BB Pipeline variables"
+  hosts: localhost
+  gather_facts: false
+
+  pre_tasks:
+    - name: BLock for pre_tasks
+      block:
+        - name: Test AWS_REGION
+          shell: "[[ -n $AWS_REGION ]]"
+          register: region
+          failed_when: false
+          changed_when: false
+          check_mode: no
+        - name: Test AWS_SECRET_ACCESS_KEY
+          shell: "[[ -n $AWS_SECRET_ACCESS_KEY ]]"
+          register: secret
+          failed_when: false
+          changed_when: false
+          check_mode: no
+        - name: Test AWS_ACCESS_KEY_ID
+          shell: "[[ -n $AWS_ACCESS_KEY_ID ]]"
+          register: key
+          failed_when: false
+          changed_when: false
+          check_mode: no
+        - name: Test if config file exists
+          stat:
+            path: "{{ config_file }}"
+          register: configfile
+          failed_when: false
+          changed_when: false
+          check_mode: no
+        - name: Do assertions on configfile and AWS credential envvars
+          assert:
+            that:
+              - "config_file is defined"
+              - "user is defined"
+              - "key.rc == 0"
+              - "secret.rc == 0"
+              - "region.rc == 0"
+              - "configfile.stat.exists"
+        - name: Set global facts
+          block:
+            - name: Convert organization name to CamelCase
+              set_fact:
+                cfn_org_name: "{{ organization.name | title }}"
+                cfn_tooling_name_prefix: "{{ tooling_account.name | default('NA') | replace('-', ' ') | replace('.', ' ') | title | replace(' ', '') }}"
+                tooling_name_prefix_env: "{{ tooling_account.name | default('NA') | replace('-', '') | replace('.', '') }}-{{ tooling_account.environment | default('prd') }}"
+
+  vars_files:
+    - "{{ config_file }}"
+  vars:
+    - org: "{{ organization.name | default('Unknown') }}"
+    - subaccount_limit: "{{ subaccount | default('all') }}"
+    - config_basedir: "{{ config_file | dirname }}"
+
+  tasks:
+    - name: "Read subaccounts from config_basedir/subaccounts.d"
+      include_vars:
+        dir: "{{ config_basedir }}/subaccounts.d"
+        extensions:
+          - 'yml'
+          - 'yaml'
+        name: subaccounts2
+      failed_when: false
+      tags:
+        - always
+    ### Add bastion account to subaccounts list of dicts
+    - name: "Create a fact to contain bastion config to be added to subaccounts"
+      set_fact:
+        bastion_account_local:
+          name: "{{ bastion_account.name }}"
+          entity: "ixor"
+          account_id: "{{ bastion_account.account_id }}"
+          email: "{{ bastion_account.email }}"
+          environment: "prd"
+      tags:
+        - always
+    - name: "Add bastion account info and subaccounts2 list to subaccounts list"
+      set_fact:
+        subaccounts_and_bastion: "{{ (subaccounts | default([])) + [ bastion_account_local ] + ((subaccounts2 | default({})).values() | list) }}"
+        subaccounts: "{{ (subaccounts | default([])) + ((subaccounts2 | default({})).values() | list) }}"
+      tags:
+        - always
+
+    - name: "Read user config from config_basedir/aws_users.d"
+      include_vars:
+        dir: "{{ config_basedir }}/aws_users.d"
+        extensions:
+          - 'yml'
+          - 'yaml'
+        name: aws_users2
+      failed_when: false
+    - name: "Add aws_users2 to aws_users"
+      set_fact:
+        aws_users: "{{ (aws_users | default([])) + ((aws_users2 | default({})).values() | list) }}"
+    - name: "Set user dict to contain the data for the selected user"
+      set_fact:
+        user_data: "{{ item }}"
+      with_items: "{{ aws_users }}"
+      when: "item.name == user"
+
+    - name: "Print users"
+      debug:
+        msg: "{{ user_data }}"
+
+    - name: Assume role for bastion/admin
+      sts_assume_role:
+        role_arn: "arn:aws:iam::{{ bastion_account.account_id }}:role/{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
+        role_session_name: "bastion-{{ bastion_account.name }}-{{ bastion_account.sts_role | default('OrganizationAccountAccessRole') }}"
+      register: assumed_role
+      check_mode: no
+
+    - name: Create users in the bastion account
+      iam:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: user
+        name: "{{ user_data.name }}"
+        state: "{{ user_data.state | default('present') }}"
+        groups:
+          - ManageYourOwnUser
+        update_password: on_create
+        password: "{{ user_data.initial_password | default('Change_0n_login') }}"
+
+    - name: Attach managed policies to users
+      iam_user:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        name: "{{ user_data.name }}"
+        state: "{{ user_data.state | default('present') }}"
+        managed_policy:
+          - "AWSAccountAccessFor-{{ user_data.name }}"
+
+    - name: Create inline policy for user to allow to assume timeboxed roles on all accounts
+      iam_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: user
+        iam_name: "{{ user_data.name }}"
+        policy_name: "assume-timeboxed-roles"
+        state: "{{ user_data.state | default('present') }}"
+        policy_json: "{{ lookup('template', 'templates/bastion-user-policy-assume-timeboxed-role.j2') }}"
+      when: "user_data.state is not defined or user_data.state != 'absent'"
+
+    - name: "Assign user to groups in the bastion account (non-Admin users)"
+      iam:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: user
+        name: "{{ user_data.name }}"
+        groups: "{{ (user_data.groups | default([])) + (default_groups | default([])) }}"
+        state: update
+      when: "(user_data.groups is not defined or 'Admin' not in user_data.groups) and (user_data.state is not defined or user_data.state != 'absent')"
+
+    - name: "Assign user to groups in the bastion account (Admin user)"
+      iam:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        iam_type: user
+        name: "{{ user_data.name }}"
+        groups: "{{ user_data.groups | default([]) }}"
+        state: update
+      when: "user_data.groups is defined and 'Admin' in user_data.groups and (user_data.state is not defined or user_data.state != 'absent')"
+
+    ### create html file with cross-account urls
+    - name: Create html file with cross-account urls
+      block:
+        - name: debug
+          debug:
+            msg: "{{ bastion_account }}"
+        - name: "Create ./html dir to hold generated html files"
+          ansible.builtin.file:
+            path: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config/html') }}"
+            state: directory
+            mode: '0755'
+        - name: "create myroles html file"
+          template:
+            src: aws-crossaccount-links/aws-crossaccount-links-myroles.html
+            dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config/html') }}/{{ org }}-myroles.html"
+        - name: "create accounts html file"
+          template:
+            src: aws-crossaccount-links/aws-accounts.html
+            dest: "{{ html_dest_dir | default('~/projects/AWS/aws-account-config/html') }}/{{ org }}-accounts.html"
+        - name: Check if a deploy script exists for the organization
+          stat:
+            path: "html-deploy/{{ org }}-html-deploy.bash"
+          register: deployscript
+          failed_when: false
+          changed_when: false
+          check_mode: no
+        - name: Run the script to deploy the HTML files
+          shell: |
+            bash ./html-deploy/{{ org }}-html-deploy.bash
+          when: "deployscript.stat.exists"
+

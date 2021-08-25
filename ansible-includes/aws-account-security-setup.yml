@@ -69,6 +69,11 @@
   ### This section creates a Service Account CloudFormation Stack on all accounts
   - name: "Block for Service Account security setup on the subaccounts"
     block:
+      - name: "Does the organization have a required IAM config file, if yes use it"
+        stat:
+          path: "{{ config_basedir }}/ServiceAccountRoles/required.yml"
+        register: stat_required_config
+
       - name: "Does the account have a ServiceAccount config file, if not use default.yml"
         stat:
           path: "{{ config_basedir }}/ServiceAccountRoles/{{ item.item.name }}.yml"
@@ -88,6 +93,18 @@
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.item.name }}.yml"
         with_items: "{{ stat_sa_config.results }}"
         when: "not item.stat.exists"
+
+      - name: "Create CFN template from Ansible template for the ServiceAccounts security setup on the subaccounts (required config file)"
+        template:
+          src: "{{ config_basedir }}/ServiceAccountRoles/required.yml"
+          dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.item.name }}-required.yml"
+        with_items: "{{ stat_sa_config.results }}"
+        when: "stat_required_config.stat.exists"
+
+      - name: "Concat the generated required.yml file to the SA template for the account"
+        shell: |
+          cat {{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.item.name }}-required.yml >> {{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.item.name }}.yml
+        with_items: "{{ stat_sa_config.results }}"
 
       - name: "Linter check of Ansible template for the ServiceAccounts security setup on the subaccounts"
         shell: |
