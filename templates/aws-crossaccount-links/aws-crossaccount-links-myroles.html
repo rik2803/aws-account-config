@@ -39,7 +39,6 @@ window.accounts = {
 
   const crossAccountLinks = {};
   const assumeRoleList = new Set();
-  const assumeRoleListTimeboxedAccess = new Set();
   const awsConfigRoleList = new Set();
 
   function addEntryToCrossAccountLinks(crossAccountLinks, accountId, accountName, remoteRole) {
@@ -116,16 +115,6 @@ window.accounts = {
       return user.name === selectedUserName
     }
   )
-
-  // For timeboxed access - all subaccounts should be added
-  accounts.subaccounts.sort( (a, b) => a.name > b.name ).forEach(
-      function (value) {
-          const account = value.name
-          const account_id = value.account_id
-          const remoterole = selectedRole
-
-          addEntryToAssumeroleList(assumeRoleListTimeboxedAccess, account_id, account, selectedUserName + '-timeboxed-role', selectedUserName)
-      })
 
   if ( selectedRole === 'admin') {
       accounts.subaccounts.sort( (a, b) => a.name > b.name ).forEach(
@@ -252,13 +241,6 @@ window.accounts = {
   let assumeRoleArray = Array.from(assumeRoleList)
   assumeRoleArray.forEach(
       function (t, index, array) {
-          document.write(t + ',<br>')
-      }
-  )
-
-  let assumeRoleArrayTimeboxedAccess = Array.from(assumeRoleListTimeboxedAccess)
-  assumeRoleArrayTimeboxedAccess.forEach(
-      function (t, index, array) {
           if (index === array.length - 1)
               document.write(t + '<br>')
           else {
@@ -266,6 +248,7 @@ window.accounts = {
           }
       }
   )
+
   document.write('&nbsp;&nbsp;}<br>}<br></code>')
 
   document.write('<h2>~/.aws/credentials for ' + vars.user + '</h2><br><code>')
