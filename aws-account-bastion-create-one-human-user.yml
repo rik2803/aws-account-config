@@ -47,6 +47,7 @@
                 cfn_org_name: "{{ organization.name | title }}"
                 cfn_tooling_name_prefix: "{{ tooling_account.name | default('NA') | replace('-', ' ') | replace('.', ' ') | title | replace(' ', '') }}"
                 tooling_name_prefix_env: "{{ tooling_account.name | default('NA') | replace('-', '') | replace('.', '') }}-{{ tooling_account.environment | default('prd') }}"
+                current_time: "{{ lookup('pipe', 'date -u +\"%Y-%m-%dT%H:%M:%SZ\"') }}"
 
   vars_files:
     - "{{ config_file }}"
@@ -101,7 +102,7 @@
       with_items: "{{ aws_users }}"
       when: "item.name == user"
 
-    - name: "Print users"
+    - name: "Print user_data"
       debug:
         msg: "{{ user_data }}"
 
@@ -112,7 +113,16 @@
       register: assumed_role
       check_mode: no
 
-    - name: Create users in the bastion account
+    - name: Create managed policy for user based on user.accounts properties
+      iam_managed_policy:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        policy_name: "AWSAccountAccessFor-{{ user_data.name }}"
+        state: "{{ user_data.state | default('present') }}"
+        policy: "{{ lookup('template', 'templates/bastion-user-policy-aws-account-access.j2') }}"
+
+    - name: Create user in the bastion account
       iam:
         aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
         aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
