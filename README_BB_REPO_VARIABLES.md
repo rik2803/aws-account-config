@@ -1,5 +1,14 @@
 # Update all ServiceAccount related repository variables
 
+## IMPORTANT
+
+To remove variables or service accounts for a repo, do not remove the variable
+configuration from the BB repo configuration files, as this will not make the
+variables disappear in BB.
+
+Instead, add the `state` property and set it to `absent`. If the state property
+already exists and is `present`, change it to `absent`.
+
 ## Pre-requisites
 
 * `admin` access on the Bastion AWS account `ixor.bastion`
