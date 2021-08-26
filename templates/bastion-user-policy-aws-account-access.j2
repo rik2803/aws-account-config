@@ -1,7 +1,19 @@
 {% set account_list = [] %}
-{% if current_time < item.accounts_valid.until | default('2099-12-31T23:59:59Z') %}
-{%   if current_time > item.accounts_valid.from | default('2010-01-01T00:00:00Z') %}
-{%     for account in item.accounts | default([]) %}
+{% if user_data is defined %}
+{%   set accounts_valid_from = user_data.accounts_valid.from | default('2010-01-01T00:00:00Z') %}
+{%   set accounts_valid_until = user_data.accounts_valid.until | default('2099-12-31T23:59:59Z') %}
+{%   set accounts = user_data.accounts | default([]) %}
+{% else %}
+{%   if item is defined %}
+{%     set accounts_valid_from = item.accounts_valid.from | default('2010-01-01T00:00:00Z') %}
+{%     set accounts_valid_until = item.accounts_valid.until | default('2099-12-31T23:59:59Z') %}
+{%     set accounts = item.accounts | default([]) %}
+{%   endif %}
+{% endif %}
+
+{% if current_time <  accounts_valid_until %}
+{%   if current_time > accounts_valid_from %}
+{%     for account in accounts %}
 {%       for subaccount in subaccounts | default([]) -%}
 {%         if subaccount.name | regex_search(account.name) %}{{ account_list.append("arn:aws:iam::" + subaccount.account_id + ":role/" + account.role) }}{% endif %}
 {%-      endfor %}
@@ -32,8 +44,8 @@
         "NumericLessThan": {
           "aws:MultiFactorAuthAge": "43200"
         },
-        "DateGreaterThan": { "aws:CurrentTime": "{{ item.accounts_valid.from | default('2010-01-01T00:00:00Z') }}" },
-        "DateLessThan": { "aws:CurrentTime": "{{ item.accounts_valid.until | default('2099-12-31T23:59:59Z') }}" }
+        "DateGreaterThan": { "aws:CurrentTime": "{{ accounts_valid_from }}" },
+        "DateLessThan": { "aws:CurrentTime": "{{ accounts_valid_until }}" }
       }
     },
     {
