@@ -34,13 +34,17 @@ ansible-playbook aws-account-setup.yml \
 
 ## How it works?
 
-* Retrieve the SSM Secrets with the `bb_client_id` and `bb_client_secret` for OAuth2
+* Retrieve the SSM Secrets with the names `bb_client_id` and `bb_client_secret` for OAuth2
   authentication with BB from the organization's bastion account. See
   [here](https://support.atlassian.com/bitbucket-cloud/docs/use-oauth-on-bitbucket-cloud/)
   for instructions to create the OAuth consumer.
-* The name of the SSM parameters is expected to be:
+* Retrieve the SSM Secrets with the names `bb_user` and `bb_apitoken` for basic authentication
+  authentication with BB from the organization's bastion account.
+* The name of the SSM parameters should be:
   * `bb_client_id`
   * `bb_client_secret`
+  * `bb_user`
+  * `bb_apitoken`
 * The config repository for the managed AWS organization should have a file named
   `sa_bb_config.yml` in de `BitbucketRepoConfigs` directory. This file looks like this:
 
@@ -71,14 +75,20 @@ repos:
       - name: "ACCOUNT_C"
         state: "present"
 ```
-  
+
+* Repo config files can also live in `./BitbucketRepoConfigs/include/**` in the
+  config repository for the managed AWS organization. That allows you to have a single
+  configuration file per managed BB repository
 * Retrieve the `<ACCOUNT>_ACCESS_KEY_ID`, `<ACCOUNT>_SECRET_ACCESS_KEY` and
   `<ACCOUNT>_ACCOUNT_ID` from SSM parameter store, and use the values to
-  populate the VV pipeline variable
+  populate the BB pipeline variable
 * When cloning `bb-aws-utils` and sourcing `lib.bash`, AWS credentials and config
   files will be created. The first account in the `service_account_list` list will
   also be the default AWS profile. To use any of the other profiles, set and export
   `AWS_DEFAULT_PROFILE` in your pipeline step.
+* When `project_key` is not defined, the repo create/update task will be skipped
+  to support old repo configs that do not have that property. This behaviour will be
+  deprecated in a future version.
 
 ## The configuration file
 
@@ -86,6 +96,10 @@ repos:
 |-------------------------|-------------------------------------------------------------------------------------------------|  
 | `tooling-account`       | The AWS account ID where _global_ artifacts are stored                                          |
 | `aws_default_region`    | The default region for the AWS profiles                                                         |
+| `project_key`           | The key of the priject the repository should be assigned to                                     |
+| `group_permissions`     | Group permissions to add to the repo                                                            |
+|  * `<n>.group_slug`     | The Group Slug to grant permissions for                                                         |
+|  * `<n>.privilege`      | The privilege to grant, should be one of `read`, `write` or `admin`                             |
 | `service_account_list`  | List of dicts for the accounts for which to create BB pipeline variables                        |
 |  * `<n>.name`           | The name of the account, this will be used to retrieve the secrets from the SSM Parameter store |
 |  * `<n>.role_to_assume` | The role to assume on the account, defaults to `cicd`                                           |
@@ -96,3 +110,32 @@ repos:
 |  * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account    |
 |  * `<n>.secure`         | Is this a secure variable (`yes`) (will not show in BB) or not (`no` - default)                 |
 
+### An example
+
+```yml
+  - name: "my-repo"
+    project_key: "PROJ_KEY"
+    group_permissions:
+      - group_slug: "good-project-developers"
+        privilege: "write"
+      - group_slug: "bad-project-developers"
+        privilege: "read"
+      - group_slug: "project-admins"
+        privilege: "admin"
+    service_account_list:
+      - name: "TOOLING"
+      - name: "DEV"
+      - name: "STG"
+      - name: "PRD"
+    custom_vars:
+      - name: "A_VARIABLE"
+        description: "A variable"
+        value: "a value"
+        secret: "false"
+      - name: "A_SECRET_VARIABLE"
+        description: "A secret variable"
+        value: "a secret value"
+        secret: "true"
+
+
+```
