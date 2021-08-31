@@ -4,7 +4,7 @@
   gather_facts: false
 
   pre_tasks:
-    - name: BLock for pre_tasks
+    - name: Block for pre_tasks
       block:
         - name: Test AWS_REGION
           shell: "[[ -n $AWS_REGION ]]"
@@ -134,6 +134,3 @@
     - name: Update CodeArtifact domain and repository policies
       import_tasks: ansible-includes/aws-set-codeartifact-policies.yml
       tags: [ 'codeartifact' ]
-
-
-

@@ -8,7 +8,7 @@
         "sts:AssumeRole"
       ],
       "Resource": [
-        "arn:aws:iam::*:role/{{ item.name }}-timeboxed-role"
+        "arn:aws:iam::*:role/{{ item.name | default(user_data.name) }}-timeboxed-role"
       ],
       "Condition": {
         "Bool": {
