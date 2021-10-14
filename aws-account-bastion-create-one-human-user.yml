@@ -92,7 +92,7 @@
           - 'yml'
           - 'yaml'
         name: aws_users2
-      failed_when: false
+        ignore_unknown_extensions: true
     - name: "Add aws_users2 to aws_users"
       set_fact:
         aws_users: "{{ (aws_users | default([])) + ((aws_users2 | default({})).values() | list) }}"
