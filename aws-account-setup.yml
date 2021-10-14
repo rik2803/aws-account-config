@@ -94,7 +94,7 @@
           - 'yml'
           - 'yaml'
         name: aws_users2
-      failed_when: false
+        ignore_unknown_extensions: true
       tags:
         - always
     - name: "Add aws_users2 to aws_users"
