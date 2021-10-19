@@ -9,3 +9,4 @@ dstudio*html
 generated-files*/*
 html/*
 *-html-deploy.bash
+.venv/
