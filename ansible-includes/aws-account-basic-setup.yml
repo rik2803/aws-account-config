@@ -585,6 +585,29 @@
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
+    - name: Create the SSMSessionAccountConfig policy with region restrictions
+      iam_managed_policy:
+        aws_access_key: "{{ item.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+        security_token: "{{ item.sts_creds.session_token }}"
+        policy_name: "SSMSessionAccountConfig"
+        policy: "{{ lookup('template', 'SSMSessionAccountConfig.json.j2') }}"
+        state: present
+      with_items: "{{ assumed_role_subaccount_single.results }}"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
+      register: async_SSMSessionAccountConfig
+      async: 7200
+      poll: 0
+      tags: [ 'subaccounts', 'createroles', 'organization' ]
+    - name: Wait for async_SSMSessionAccountConfig tasks to finish
+      async_status: jid={{ item.ansible_job_id }}
+      register: async_SSMSessionAccountConfig_jobs
+      until: async_SSMSessionAccountConfig_jobs.finished
+      retries: 300
+      with_items: "{{ async_SSMSessionAccountConfig.results | default([]) }}"
+      when: "item.ansible_job_id is defined"
+      tags: [ 'subaccounts', 'createroles', 'organization', 'SSMSessionAccountConfig' ]
+
     ### This assumes #aws_roles time a role per account, because these will be used in the
     ### a loop to create all roles on all subaccounts.
     - name: Assume role for subaccounts

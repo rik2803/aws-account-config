@@ -1,0 +1,52 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "ec2-instance-connect:*"
+      ],
+      "Resource": [
+        "arn:aws:ec2:{{ item.item.default_region | default('eu-central-1') }}:{{ item.item.account_id }}:instance/*"
+      ],
+      "Effect": "Allow"
+    },
+    {
+      "Action": [
+        "ec2:Describe*"
+      ],
+      "Resource": [
+        "*"
+      ],
+      "Effect": "Allow"
+    },
+    {
+      "Action": [
+        "rds:Describe*"
+      ],
+      "Resource": [
+        "*"
+      ],
+      "Effect": "Allow"
+    },
+    {
+      "Action": [
+        "ssm:StartSession"
+      ],
+      "Resource": [
+        "arn:aws:ec2:{{ item.item.default_region | default('eu-central-1') }}:{{ item.item.account_id }}:instance/*",
+        "arn:aws:ssm:{{ item.item.default_region | default('eu-central-1') }}::document/AWS-StartSSHSession"
+      ],
+      "Effect": "Allow"
+    },
+    {
+      "Action": [
+        "ssm:TerminateSession"
+      ],
+      "Resource": [
+        "arn:aws:ssm:*:*:session/${aws:username}-*",
+        "arn:aws:ssm:*:*:session/*${aws:userid}-*"
+      ],
+      "Effect": "Allow"
+    }
+  ]
+}
