@@ -58,6 +58,34 @@
     - config_basedir: "{{ config_file | dirname }}"
 
   tasks:
+    - name: "Read subaccounts from config_basedir/subaccounts.d"
+      include_vars:
+        dir: "{{ config_basedir }}/subaccounts.d"
+        extensions:
+          - 'yml'
+          - 'yaml'
+        name: subaccounts2
+      failed_when: false
+      tags:
+        - always
+    ### Add bastion account to subaccounts list of dicts
+    - name: "Create a fact to contain bastion config to be added to subaccounts"
+      set_fact:
+        bastion_account_local:
+          name: "{{ bastion_account.name }}"
+          entity: "ixor"
+          account_id: "{{ bastion_account.account_id }}"
+          email: "{{ bastion_account.email }}"
+          environment: "prd"
+      tags:
+        - always
+    - name: "Add bastion account info and subaccounts2 list to subaccounts list"
+      set_fact:
+        subaccounts_and_bastion: "{{ (subaccounts | default([])) + [ bastion_account_local ] + ((subaccounts2 | default({})).values() | list) }}"
+        subaccounts: "{{ (subaccounts | default([])) + ((subaccounts2 | default({})).values() | list) }}"
+      tags:
+        - always
+
     - name: Create cached assumerole credentials and aws-cfn-gen scripts
       import_tasks: ansible-includes/aws-assumerole-and-save-credentials.yml
       tags: [ 'assumerole' ]
