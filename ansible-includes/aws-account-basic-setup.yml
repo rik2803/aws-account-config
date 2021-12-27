@@ -417,7 +417,16 @@
       with_items:
         - "{{ subaccounts }}"
       when: "bastion_account.account_id != item.account_id and ( subaccount_limit == 'all' or item.name.startswith(subaccount_limit) )"
-      tags: [ 'subaccounts', 'passwordpolicy', 'accountalias', 'createroles', 'organization', 'keypair', 'servicelinkedrole', 'ssm_parameters' ]
+      tags:
+        - 'subaccounts'
+        - 'passwordpolicy'
+        - 'accountalias'
+        - 'createroles'
+        - 'organization'
+        - 'keypair'
+        - 'servicelinkedrole'
+        - 'ssm_parameters'
+        - 'budget'
 
     - name: Set password policy rules on the sub accounts
       command: >
@@ -738,3 +747,45 @@
           when: "deployscript.stat.exists"
       tags: [ 'html', 'create_users' ]
 
+    - name: Block for budget alerts on the subaccounts
+      block:
+        - name: "Create CFN template from Ansible template for the AWS Config setup on the subaccounts"
+          template:
+            src: "CloudFormationTemplates/cfn-budget-alerts.yml"
+            dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-budget-alerts-{{ item.item.account_id }}.yml"
+          with_items: "{{ assumed_role_subaccount_single.results }}"
+          when: "skip_aws_config is undefined or not skip_aws_config"
+
+        - name: Linter check for the budget alerts on the subaccounts
+          shell: |
+            cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-budget-alerts-{{ item.item.account_id }}.yml"
+          with_items: "{{ assumed_role_subaccount_single.results }}"
+
+        - name: Create/Update Budget Alert Stack on all accounts
+          cloudformation:
+            aws_access_key: "{{ item.sts_creds.access_key }}"
+            aws_secret_key: "{{ item.sts_creds.secret_key }}"
+            security_token: "{{ item.sts_creds.session_token }}"
+            region: "{{ default_region | default('eu-central-1') }}"
+            stack_name: "{{ cfn_org_name }}BudgetAlerts"
+            state: "present"
+            disable_rollback: false
+            template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-budget-alerts-{{ item.item.account_id }}.yml"
+          with_items:
+            - "{{ assumed_role_subaccount_single.results }}"
+          register: async_createbudgetalertscloudformationstack
+          async: 7200
+          poll: 0
+          when: "skip_aws_config is undefined or not skip_aws_config"
+
+        ### Wait
+        - name: Wait for async_createbudgetalertscloudformationstack tasks to finish
+          async_status: jid={{ item.ansible_job_id }}
+          register: async_createbudgetalertscloudformationstack_jobs
+          until: async_createbudgetalertscloudformationstack_jobs.finished
+          retries: 300
+          with_items: "{{ async_createbudgetalertscloudformationstack.results | default([]) }}"
+          when: "skip_aws_config is undefined or not skip_aws_config"
+
+      when: "budget_alerts is defined and budget_alerts.notification_emails is defined"
+      tags: [ 'subaccounts', 'budget' ]

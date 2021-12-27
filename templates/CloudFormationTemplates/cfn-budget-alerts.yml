@@ -1,0 +1,48 @@
+---
+{% set budget_alert_spend = "200" %}
+{% set budget_alert_notification_emails = [] %}
+
+{% if item.item.budget_alerts is defined and item.item.budget_alerts.spend is defined %}
+{%   set budget_alert_spend = item.item.budget_alerts.spend %}
+{% elif budget_alerts is defined and budget_alerts.spend is defined %}
+{%   set budget_alert_spend = budget_alerts.spend %}
+{% else %}
+{%   set budget_alert_spend = 200 %}
+{% endif %}
+
+{% if item.item.budget_alerts is defined and item.item.budget_alerts.notification_emails is defined %}
+{%   set budget_alert_notification_emails = item.item.budget_alerts.notification_emails %}
+{% elif budget_alerts is defined and budget_alerts.notification_emails is defined %}
+{%   set budget_alert_notification_emails = budget_alerts.notification_emails %}
+{% endif %}
+
+Description: "Budget Alerts"
+Resources:
+  BudgetAlerts:
+    Type: "AWS::Budgets::Budget"
+    Properties:
+      Budget:
+        BudgetLimit:
+          Amount: {{ budget_alert_spend }}
+          Unit: USD
+        TimeUnit: MONTHLY
+        BudgetType: COST
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 80
+          Subscribers:
+{% for email in budget_alert_notification_emails | default([]) %}
+            - SubscriptionType: EMAIL
+              Address: "{{ email }}"
+{% endfor %}
+        - Notification:
+            NotificationType: FORECASTED
+            ComparisonOperator: GREATER_THAN
+            Threshold: 80
+          Subscribers:
+{% for email in budget_alert_notification_emails | default([]) %}
+            - SubscriptionType: EMAIL
+              Address: "{{ email }}"
+{% endfor %}
