@@ -1,13 +1,18 @@
 ---
 {% set budget_alert_spend = "200" %}
+{% set budget_alert_threshold = "99" %}
 {% set budget_alert_notification_emails = [] %}
 
 {% if item.item.budget_alerts is defined and item.item.budget_alerts.spend is defined %}
 {%   set budget_alert_spend = item.item.budget_alerts.spend %}
 {% elif budget_alerts is defined and budget_alerts.spend is defined %}
 {%   set budget_alert_spend = budget_alerts.spend %}
-{% else %}
-{%   set budget_alert_spend = 200 %}
+{% endif %}
+
+{% if item.item.budget_alerts is defined and item.item.budget_alerts.threshold is defined %}
+{%   set budget_alert_threshold = item.item.budget_alerts.threshold %}
+{% elif budget_alerts is defined and budget_alerts.threshold is defined %}
+{%   set budget_alert_threshold = budget_alerts.threshold %}
 {% endif %}
 
 {% if item.item.budget_alerts is defined and item.item.budget_alerts.notification_emails is defined %}
@@ -31,7 +36,7 @@ Resources:
         - Notification:
             NotificationType: ACTUAL
             ComparisonOperator: GREATER_THAN
-            Threshold: 80
+            Threshold: "{{ budget_alert_threshold }}"
           Subscribers:
 {% for email in budget_alert_notification_emails | default([]) %}
             - SubscriptionType: EMAIL
@@ -40,7 +45,7 @@ Resources:
         - Notification:
             NotificationType: FORECASTED
             ComparisonOperator: GREATER_THAN
-            Threshold: 80
+            Threshold: "{{ budget_alert_threshold }}"
           Subscribers:
 {% for email in budget_alert_notification_emails | default([]) %}
             - SubscriptionType: EMAIL
