@@ -36,7 +36,7 @@ Resources:
         - Notification:
             NotificationType: ACTUAL
             ComparisonOperator: GREATER_THAN
-            Threshold: "{{ budget_alert_threshold }}"
+            Threshold: {{ budget_alert_threshold }}
           Subscribers:
 {% for email in budget_alert_notification_emails | default([]) %}
             - SubscriptionType: EMAIL
@@ -45,7 +45,7 @@ Resources:
         - Notification:
             NotificationType: FORECASTED
             ComparisonOperator: GREATER_THAN
-            Threshold: "{{ budget_alert_threshold }}"
+            Threshold: {{ budget_alert_threshold }}
           Subscribers:
 {% for email in budget_alert_notification_emails | default([]) %}
             - SubscriptionType: EMAIL
