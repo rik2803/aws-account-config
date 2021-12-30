@@ -1,6 +1,6 @@
 ---
-{% set budget_alert_spend = "200" %}
-{% set budget_alert_threshold = "99" %}
+{% set budget_alert_spend = 200 %}
+{% set budget_alert_threshold = 99 %}
 {% set budget_alert_notification_emails = [] %}
 
 {% if item.item.budget_alerts is defined and item.item.budget_alerts.spend is defined %}
