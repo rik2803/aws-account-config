@@ -20,8 +20,7 @@ Resources:
               AWS: arn:aws:iam::{{ bastion_account.account_id }}:root
             Action: sts:AssumeRole
       Policies:
-{%   for ecr_repo in ecr_user.ecr_repo_list %}
-        - PolicyName: "{{ ecr_repo | replace('-', ' ') | replace('_', ' ') | replace('/', ' ') | replace('.', ' ') | title | replace(' ', '') }}"
+        - PolicyName: "EcrPolicyFor{{ cfn_username }}"
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -35,14 +34,16 @@ Resources:
                   - "ecr:BatchCheckLayerAvailability"
                   - "ecr:GetRepositoryPolicy"
                   - "ecr:GetLifecyclePolicy"
-                Resource: "arn:aws:ecr:*:{{ tooling_account.account_id }}:repository/{{ ecr_repo }}"
+                Resource:
+{%   for ecr_repo in ecr_user.ecr_repo_list %}
+                  - "arn:aws:ecr:*:{{ tooling_account.account_id }}:repository/{{ ecr_repo }}"
+{%   endfor %}
               - Effect: Allow
                 Action:
                   - "ecr:GetRegistryPolicy"
                   - "ecr:DescribeRegistry"
                   - "ecr:GetAuthorizationToken"
                 Resource: "*"
-{%   endfor %}
       Tags:
         - Key: "serial"
           Value: "{{ serial }}"
