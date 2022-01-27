@@ -1,7 +1,7 @@
 ---
 - name: Apply configuration to all AWS accounts in an organization
   hosts: localhost
-  gather_facts: false
+  gather_facts: true
 
   pre_tasks:
     - name: Block for pre_tasks
