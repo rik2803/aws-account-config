@@ -113,23 +113,59 @@ repos:
 
 ## The configuration file
 
-| Property                | Description                                                                                     |
-|-------------------------|-------------------------------------------------------------------------------------------------|
-| `tooling-account`       | The AWS account ID where _global_ artifacts are stored                                          |
-| `aws_default_region`    | The default region for the AWS profiles                                                         |
-| `project_key`           | The key of the project the repository should be assigned to                                     |
-| `group_permissions`     | Group permissions to add to the repo                                                            |
-|  * `<n>.group_slug`     | The Group Slug to grant permissions for                                                         |
-|  * `<n>.privilege`      | The privilege to grant, should be one of `read`, `write` or `admin`                             |
-| `service_account_list`  | List of dicts for the accounts for which to create BB pipeline variables                        |
-|  * `<n>.name`           | The name of the account, this will be used to retrieve the secrets from the SSM Parameter store |
-|  * `<n>.role_to_assume` | The role to assume on the account, defaults to `cicd`                                           |
-|  * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account    |
-|  `custom_vars`          | List of `name`/`value` dicts to create other BB pipeline variables                              |
-|  * `<n>.name`           | The name of the variable                                                                        |
-|  * `<n>.value`          | The value of the variable                                                                       |
-|  * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account    |
-|  * `<n>.secure`         | Is this a secure variable (`yes`) (will not show in BB) or not (`no` - default)                 |
+| Property               | Description                                                                                      |
+|------------------------|--------------------------------------------------------------------------------------------------|
+| `tooling-account`      | The AWS account ID where _global_ artifacts are stored                                           |
+| `aws_default_region`   | The default region for the AWS profiles                                                          |
+| `project_key`          | The key of the project the repository should be assigned to                                      |
+| `group_permissions`    | Group permissions to add to the repo                                                             |
+| * `<n>.group_slug`     | The Group Slug to grant permissions for                                                          |
+| * `<n>.privilege`      | The privilege to grant, should be one of `read`, `write` or `admin`                              |
+| `service_account_list` | List of dicts for the accounts for which to create BB pipeline variables                         |
+| * `<n>.name`           | The name of the account, this will be used to retrieve the secrets from the SSM Parameter store  |
+| * `<n>.role_to_assume` | The role to assume on the account, defaults to `cicd`                                            |
+| * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account     |
+| `custom_vars`          | List of `name`/`value` dicts to create other BB pipeline variables                               |
+| * `<n>.name`           | The name of the variable                                                                         |
+| * `<n>.value`          | The value of the variable                                                                        |
+| * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account     |
+| * `<n>.secure`         | Is this a secure variable (`yes`) (will not show in BB) or not (`no` - default)                  |
+| `branch_restrictions`  | List of branch restrictions, see BB API docs for the syntax (and should be converted to YAML)    |
+| `branching_model`      | (WIP) Branching model to apply, see BB API docs for the syntax (and should be converted to YAML) |
+
+### What it does
+
+The goal is to fully manage the lifecycle of a BitBucket repository.
+
+* Create or update the repository
+* Set branch restrictions if the repository has just been created
+* Set branching model (Work In Progress)
+* Set group permissions
+* Enable pipelines
+* Set pipeline environment variables:
+  * For AWS SA accounts
+  * Custom variables
+  
+The `branch_restrictions` and `branching_model` can be specified:
+
+* Somewhere as a toplevel variable `bitbucket.default_branch_restrictions` or `bitbucket.default_branching_model`.
+* The toplevel config can be overridden in the repository configuration.
+
+The BB group `default-reviewers` (if it exists) will always be granted write permissions on a repo, as the
+group members should be able to review repo PRs.
+
+The toplevel property `bitbucket.default_reviewers` is also required, as they are configured as the default
+reviewers for a repository. When you want to remove a user from the default reviewers list, change the state
+to `absent` rather than removing it from the list entirely. In the latter case, tthe user will remain in the
+default reviewers list when updating the repo config.
+
+```bash
+bitbucket:
+  default_reviewers:
+    - uuid: "{user uuid}"
+      name: "Firstname Lastname"
+      state: "present"
+```
 
 ### An example
 
@@ -157,6 +193,73 @@ repos:
         description: "A secret variable"
         value: "a secret value"
         secret: "true"
-
-
+    branch_restrictions:
+      - kind: push
+        branch_match_kind: glob
+        pattern: "master"
+        users:
+          - uuid: "{user uuid}"
+      - kind: push
+        branch_match_kind: glob
+        pattern: "hotfix/*"
+        users:
+          - uuid: "{user uuid}"
+      - kind: delete
+        branch_match_kind: glob
+        pattern: "master"
+      - kind: delete
+        branch_match_kind: glob
+        pattern: "hotfix/*"
+      - kind: force
+        branch_match_kind: glob
+        pattern: "master"
+      - kind: force
+        branch_match_kind: glob
+        pattern: "hotfix/*"
+      - kind: require_passing_builds_to_merge
+        branch_match_kind: glob
+        pattern: "master"
+        value: 1
+      - kind: require_passing_builds_to_merge
+        branch_match_kind: glob
+        pattern: "hotfix/*"
+        value: 1
+      - kind: require_approvals_to_merge
+        branch_match_kind: glob
+        pattern: "master"
+        value: 1
+      - kind: require_approvals_to_merge
+        branch_match_kind: glob
+        pattern: "hotfix/*"
+        value: 1
+      - kind: require_default_reviewer_approvals_to_merge
+        branch_match_kind: glob
+        pattern: "master"
+        value: 1
+      - kind: require_default_reviewer_approvals_to_merge
+        branch_match_kind: glob
+        pattern: "hotfix/*"
+        value: 1
+      - kind: reset_pullrequest_approvals_on_change
+        branch_match_kind: glob
+        pattern: "master"
+      - kind: reset_pullrequest_approvals_on_change
+        branch_match_kind: glob
+        pattern: "hotfix/*"
+  default_branching_model:
+    development:
+      name:
+      use_mainbranch: true
+    production:
+      name:
+      use_mainbranch: true
+    branch_types:
+      - kind: "release"
+        prefix: "release/"
+      - kind: "hotfix"
+        prefix: "hotfix/"
+      - kind: "feature"
+        prefix: "feature/"
+      - kind: "bugfix"
+        prefix: "bugfix/"
 ```
