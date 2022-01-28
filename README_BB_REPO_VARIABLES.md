@@ -39,7 +39,7 @@ ansible-playbook aws-account-setup.yml \
   [here](https://support.atlassian.com/bitbucket-cloud/docs/use-oauth-on-bitbucket-cloud/)
   for instructions to create the OAuth consumer.
 * Retrieve the SSM Secrets with the names `bb_user` and `bb_apitoken` for basic authentication
-  authentication with BB from the organization's bastion account.
+  with BB from the organization's bastion account.
 * The name of the SSM parameters should be:
   * `bb_client_id`
   * `bb_client_secret`
@@ -53,6 +53,10 @@ tooling_account:
   account_id: "123456789012"
 aws_default_region: "eu-central-1"
 repos:
+{% for include_file in bb_repo_config_include_files | default([]) %}
+{%   include 'include/' + include_file %}
+
+{% endfor %}
   - name: "repo1"
     service_account_list:
       - name: "ACCOUNT_A"
@@ -78,7 +82,24 @@ repos:
 
 * Repo config files can also live in `./BitbucketRepoConfigs/include/**` in the
   config repository for the managed AWS organization. That allows you to have a single
-  configuration file per managed BB repository
+  configuration file per managed BB repository. That's why the `for` loop is in
+  `sa_bb_config.yml`. The content of the files to be included should be indented
+  with the correct number of spaces to guarantee that the generated content is
+  correct YAML. The name of the YAML files to include should match the name
+  of the repository, because the includes are filtered on `limit_bb_repo` as well.
+
+```yaml
+  - name: "repo3"
+    service_account_list:
+      - name: "ACCOUNT_A"
+        state: present
+        role_to_assume: "a_not_default_role"
+      - name: "ACCOUNT_B"
+        state: absent
+      - name: "ACCOUNT_C"
+        state: "present"
+```
+
 * Retrieve the `<ACCOUNT>_ACCESS_KEY_ID`, `<ACCOUNT>_SECRET_ACCESS_KEY` and
   `<ACCOUNT>_ACCOUNT_ID` from SSM parameter store, and use the values to
   populate the BB pipeline variable
@@ -93,10 +114,10 @@ repos:
 ## The configuration file
 
 | Property                | Description                                                                                     |
-|-------------------------|-------------------------------------------------------------------------------------------------|  
+|-------------------------|-------------------------------------------------------------------------------------------------|
 | `tooling-account`       | The AWS account ID where _global_ artifacts are stored                                          |
 | `aws_default_region`    | The default region for the AWS profiles                                                         |
-| `project_key`           | The key of the priject the repository should be assigned to                                     |
+| `project_key`           | The key of the project the repository should be assigned to                                     |
 | `group_permissions`     | Group permissions to add to the repo                                                            |
 |  * `<n>.group_slug`     | The Group Slug to grant permissions for                                                         |
 |  * `<n>.privilege`      | The privilege to grant, should be one of `read`, `write` or `admin`                             |
