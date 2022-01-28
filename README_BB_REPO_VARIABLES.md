@@ -156,7 +156,7 @@ group members should be able to review repo PRs.
 
 The toplevel property `bitbucket.default_reviewers` is also required, as they are configured as the default
 reviewers for a repository. When you want to remove a user from the default reviewers list, change the state
-to `absent` rather than removing it from the list entirely. In the latter case, tthe user will remain in the
+to `absent` rather than removing it from the list entirely. In the latter case, the user will remain in the
 default reviewers list when updating the repo config.
 
 ```bash
