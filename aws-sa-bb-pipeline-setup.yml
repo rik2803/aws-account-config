@@ -1,7 +1,7 @@
 ---
 - name: "Setup BB Pipeline variables"
   hosts: localhost
-  gather_facts: false
+  gather_facts: true
 
   pre_tasks:
     - name: BLock for pre_tasks
