@@ -113,25 +113,26 @@ repos:
 
 ## The configuration file
 
-| Property               | Description                                                                                      |
-|------------------------|--------------------------------------------------------------------------------------------------|
-| `tooling-account`      | The AWS account ID where _global_ artifacts are stored                                           |
-| `aws_default_region`   | The default region for the AWS profiles                                                          |
-| `project_key`          | The key of the project the repository should be assigned to                                      |
-| `group_permissions`    | Group permissions to add to the repo                                                             |
-| * `<n>.group_slug`     | The Group Slug to grant permissions for                                                          |
-| * `<n>.privilege`      | The privilege to grant, should be one of `read`, `write` or `admin`                              |
-| `service_account_list` | List of dicts for the accounts for which to create BB pipeline variables                         |
-| * `<n>.name`           | The name of the account, this will be used to retrieve the secrets from the SSM Parameter store  |
-| * `<n>.role_to_assume` | The role to assume on the account, defaults to `cicd`                                            |
-| * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account     |
-| `custom_vars`          | List of `name`/`value` dicts to create other BB pipeline variables                               |
-| * `<n>.name`           | The name of the variable                                                                         |
-| * `<n>.value`          | The value of the variable                                                                        |
-| * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account     |
-| * `<n>.secure`         | Is this a secure variable (`yes`) (will not show in BB) or not (`no` - default)                  |
-| `branch_restrictions`  | List of branch restrictions, see BB API docs for the syntax (and should be converted to YAML)    |
-| `branching_model`      | (WIP) Branching model to apply, see BB API docs for the syntax (and should be converted to YAML) |
+| Property               | Description                                                                                        |
+|------------------------|----------------------------------------------------------------------------------------------------|
+| `tooling-account`      | The AWS account ID where _global_ artifacts are stored                                             |
+| `aws_default_region`   | The default region for the AWS profiles                                                            |
+| `project_key`          | The key of the project the repository should be assigned to                                        |
+| `group_permissions`    | Group permissions to add to the repo                                                               |
+| * `<n>.group_slug`     | The Group Slug to grant permissions for                                                            |
+| * `<n>.privilege`      | The privilege to grant, should be one of `read`, `write` or `admin`                                |
+| `service_account_list` | List of dicts for the accounts for which to create BB pipeline variables                           |
+| * `<n>.name`           | The name of the account, this will be used to retrieve the secrets from the SSM Parameter store    |
+| * `<n>.role_to_assume` | The role to assume on the account, defaults to `cicd`                                              |
+| * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account       |
+| `custom_vars`          | List of `name`/`value` dicts to create other BB pipeline variables                                 |
+| * `<n>.name`           | The name of the variable                                                                           |
+| * `<n>.value`          | The value of the variable                                                                          |
+| * `<n>.state`          | `present` (default) or `absent`, create or remove the BB pipeline variables for this account       |
+| * `<n>.secure`         | Is this a secure variable (`yes`) (will not show in BB) or not (`no` - default)                    |
+| `branch_restrictions`  | List of branch restrictions, see BB API docs for the syntax (and should be converted to YAML)      |
+| `branching_model`      | (WIP) Branching model to apply, see BB API docs for the syntax (and should be converted to YAML)   |
+| `language`             | Optional, defaults to `java` (`java`, `javascript`, `nodejs`, `typescript`, `shell`, `python`, ... |
 
 ### What it does
 
@@ -141,6 +142,8 @@ The goal is to fully manage the lifecycle of a BitBucket repository.
 * Set branch restrictions if the repository has just been created
 * Set branching model (Work In Progress)
 * Set group permissions
+* Create a template `README.md` file (and implicitly the `mastrer` branch)
+* Set the project language (default `java`)
 * Enable pipelines
 * Set pipeline environment variables:
   * For AWS SA accounts
