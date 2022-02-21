@@ -222,7 +222,7 @@ window.accounts = {
   )
   document.write('</ul><br>')
 
-  document.write('<h2>aws-sts-assumerole config file for ' + vars.user + '</h2><br>')
+  document.write('<h2><code>aws-sts-assumerole</code> config file for ' + vars.user + '<br\>Save in <code>~/.assumerole</code></h2><br\>')
   document.write('<code>{<br>')
 {% if codeartifact_config is defined %}
   document.write('&nbsp;&nbsp;"codeartifact": [<br>')
@@ -249,12 +249,12 @@ window.accounts = {
 
   document.write('&nbsp;&nbsp;}<br>}<br></code>')
 
-  document.write('<h2>~/.aws/credentials for ' + vars.user + '</h2><br><code>')
+  document.write('<h2><code>~/.aws/credentials</code> for ' + vars.user + '</h2><br><code>')
   document.write('[{{ organization.name }}-bastion]<br/>')
   document.write('aws_access_key_id = AKIAxxxxxxxxx<br/>')
   document.write('aws_secret_access_key = xxxxxxxxxxxxxxxx<br/>')
-  document.write('<br/>')
-  document.write('<h2>~/.aws/config for ' + vars.user + '</h2><br><code>')
+  document.write('<br/></code>')
+  document.write('<h2><code>~/.aws/config</code> for ' + vars.user + '</h2><br/><code>')
   document.write('[default]<br/>')
   document.write('output=json<br/>')
   document.write('region=eu-central-1<br/>')
