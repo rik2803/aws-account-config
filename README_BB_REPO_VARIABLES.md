@@ -144,9 +144,9 @@ The goal is to fully manage the lifecycle of a BitBucket repository.
 * Set group permissions
 * Create a template `README.md` file (and implicitly the `mastrer` branch)
 * Set the project language (default `java`)
-* Enable pipelines
+* Enable pipelines, but only if the `service_account_list` property is set.
 * Set pipeline environment variables:
-  * For AWS SA accounts
+  * For AWS SA accounts if the `service_account_list` property is set.
   * Custom variables
   
 The `branch_restrictions` and `branching_model` can be specified:
