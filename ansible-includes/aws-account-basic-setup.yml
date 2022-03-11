@@ -761,6 +761,12 @@
             cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-budget-alerts-{{ item.item.account_id }}.yml"
           with_items: "{{ assumed_role_subaccount_single.results }}"
 
+        - name: Print all aws_users names
+          debug:
+            msg: "{{ item }}"
+          with_items:
+            - "{{ assumed_role_subaccount_single.results }}"
+
         - name: Create/Update Budget Alert Stack on all accounts
           cloudformation:
             aws_access_key: "{{ item.sts_creds.access_key }}"
