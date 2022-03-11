@@ -111,6 +111,25 @@ repos:
   to support old repo configs that do not have that property. This behaviour will be
   deprecated in a future version.
 
+## Tags
+
+Tags are used to:
+
+* Speed up the process by limiting the actions to what changed.
+* Avoid that the BB API call rate is exceeded.
+
+Following tags are supported:
+
+* `bb_permissions`: Apply group permissions only.
+* `bb_serviceaccounts`: Apply all repository variables related to AWS Service Accounts.
+* `bb_rotate_credentials`: When the Service Account credentials in the Bastion account are updated
+  (this should be done regularly), the BB repository Service Account variables should be updated as
+  well. Otherwise, the pipelines will not be able to assume the required permissions.
+* `bb_customvars`: Apply custom environment variables only.
+* `bb_ssh_keypair`: Apply the SSH key-pair only.
+* `bb_datadog`: Apply the DataDog integration environment variables `DD_API_KEY`, `DD_APP_KEY` and `DD_API_HOST`.
+* `bb_snyk`: Apply the Snyk token used to integrate Snyk checks in pipelines,
+
 ## The configuration file
 
 | Property               | Description                                                                                        |
