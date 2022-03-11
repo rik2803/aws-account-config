@@ -787,5 +787,5 @@
           with_items: "{{ async_createbudgetalertscloudformationstack.results | default([]) }}"
           when: "skip_aws_config is undefined or not skip_aws_config"
 
-      when: "budget_alerts is defined and budget_alerts.notification_emails is defined and ( subaccount_limit == 'all' or item.item[0].name.startswith(subaccount_limit))"
+      when: "budget_alerts is defined and budget_alerts.notification_emails is defined and ( subaccount_limit == 'all' or item.name.startswith(subaccount_limit))"
       tags: [ 'subaccounts', 'budget' ]
