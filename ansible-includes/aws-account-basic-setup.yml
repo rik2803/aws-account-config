@@ -797,10 +797,6 @@
           poll: 0
           when: "(skip_aws_config is undefined or not skip_aws_config) and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
 
-#        - name: Print async_createbudgetalertscloudformationstack
-#          debug:
-#            msg: "{{ async_createbudgetalertscloudformationstack }}"
-
         ### Wait
         - name: Wait for async_createbudgetalertscloudformationstack tasks to finish
           async_status: jid={{ item.ansible_job_id }}
