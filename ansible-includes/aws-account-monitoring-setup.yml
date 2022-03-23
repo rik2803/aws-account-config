@@ -34,6 +34,7 @@
           role_arn: "arn:aws:iam::{{ item.account_id }}:role/{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
           role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrgAccAccRole') }}"
         register: "monitoring_assumed_role_subaccount_single"
+        when: "subaccount_limit == 'all' or item.name.startswith(subaccount_limit)"
         with_items:
           - "{{ subaccounts }}"
 
@@ -41,6 +42,7 @@
         template:
           src: "CloudFormationTemplates/cfn-monitoring-for-subaccount.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}-{{ item[1] }}.yml"
+        when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
         with_nested:
           - "{{ monitoring_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
@@ -48,6 +50,7 @@
       - name: Linter check cloudformation stack monitoring setup on the subaccounts
         shell:
           cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}-{{ item[1] }}.yml"
+        when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
         with_nested:
           - "{{ monitoring_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
@@ -62,6 +65,7 @@
           state: "present"
           disable_rollback: false
           template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}-{{ item[1] }}.yml"
+        when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
         with_nested:
           - "{{ monitoring_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
