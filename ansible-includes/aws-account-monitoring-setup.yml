@@ -42,7 +42,7 @@
         template:
           src: "CloudFormationTemplates/cfn-monitoring-for-subaccount.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}-{{ item[1] }}.yml"
-        when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
+        when: "subaccount_limit == 'all' or item[0].item.name.startswith(subaccount_limit)"
         with_nested:
           - "{{ monitoring_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
@@ -50,7 +50,7 @@
       - name: Linter check cloudformation stack monitoring setup on the subaccounts
         shell:
           cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}-{{ item[1] }}.yml"
-        when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
+        when: "subaccount_limit == 'all' or item[0].item.name.startswith(subaccount_limit)"
         with_nested:
           - "{{ monitoring_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
@@ -65,7 +65,7 @@
           state: "present"
           disable_rollback: false
           template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}-{{ item[1] }}.yml"
-        when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
+        when: "subaccount_limit == 'all' or item[0].item.name.startswith(subaccount_limit)"
         with_nested:
           - "{{ monitoring_assumed_role_subaccount_single.results }}"
           - "{{ aws_local_regions }}"
@@ -81,6 +81,7 @@
         until: async_monitoringcloudformationstack_jobs.finished
         retries: 300
         with_items: "{{ async_monitoringcloudformationstack.results | default([]) }}"
+        when: "subaccount_limit == 'all' or item.item[0].item.name.startswith(subaccount_limit)"
 
     tags: [ 'monitoring', 'monitoring_subaccount' ]
 
