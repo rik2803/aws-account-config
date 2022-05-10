@@ -757,14 +757,6 @@
           when: "deployscript.stat.exists"
       tags: [ 'html', 'create_users' ]
 
-#    - name: Print assumed_role_subaccount_single
-#      debug:
-#        msg: "{{ item }}"
-#      with_items:
-#        - "{{ assumed_role_subaccount_single.results }}"
-#      when: "(skip_aws_config is undefined or not skip_aws_config) and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
-#      tags: [ 'subaccounts', 'budget' ]
-
     - name: Block for budget alerts on the subaccounts
       block:
         - name: "Create CFN template from Ansible template for the AWS Config setup on the subaccounts"
@@ -772,13 +764,13 @@
             src: "CloudFormationTemplates/cfn-budget-alerts.yml"
             dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-budget-alerts-{{ item.item.account_id }}.yml"
           with_items: "{{ assumed_role_subaccount_single.results }}"
-          when: "(skip_aws_config is undefined or not skip_aws_config) and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
+          when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
 
         - name: Linter check for the budget alerts on the subaccounts
           shell: |
             cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-budget-alerts-{{ item.item.account_id }}.yml"
           with_items: "{{ assumed_role_subaccount_single.results }}"
-          when: "(skip_aws_config is undefined or not skip_aws_config) and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
+          when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
 
         - name: Create/Update Budget Alert Stack on all accounts
           cloudformation:
@@ -795,7 +787,7 @@
           register: async_createbudgetalertscloudformationstack
           async: 7200
           poll: 0
-          when: "(skip_aws_config is undefined or not skip_aws_config) and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
+          when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
 
         ### Wait
         - name: Wait for async_createbudgetalertscloudformationstack tasks to finish
@@ -804,7 +796,7 @@
           until: async_createbudgetalertscloudformationstack_jobs.finished
           retries: 300
           with_items: "{{ async_createbudgetalertscloudformationstack.results | default([]) }}"
-          when: "(skip_aws_config is undefined or not skip_aws_config) and ( subaccount_limit == 'all' or item.item.item.name.startswith(subaccount_limit) )"
+          when: "subaccount_limit == 'all' or item.item.item.name.startswith(subaccount_limit)"
 
       when: "budget_alerts is defined and budget_alerts.notification_emails is defined"
       tags: [ 'subaccounts', 'budget' ]
