@@ -5,7 +5,28 @@
             "Effect": "Deny",
             "Action": [
                 "cloudformation:DescribeStacks",
-                "ssm:Get*",
+                "ssm:GetCalendar",
+                "ssm:GetCalendarState",
+                "ssm:GetCommandInvocation",
+                "ssm:GetConnectionStatus",
+                "ssm:GetDefaultPatchBaseline",
+                "ssm:GetDeployablePatchSnapshotForInstance",
+                "ssm:GetDocument",
+                "ssm:GetInventory",
+                "ssm:GetInventorySchema",
+                "ssm:GetMaintenanceWindow",
+                "ssm:GetMaintenanceWindowExecution",
+                "ssm:GetMaintenanceWindowExecutionTask",
+                "ssm:GetMaintenanceWindowExecutionTaskInvocation",
+                "ssm:GetMaintenanceWindowTask",
+                "ssm:GetManifest",
+                "ssm:GetOpsItem",
+                "ssm:GetOpsMetadata",
+                "ssm:GetOpsSummary",
+                "ssm:GetParameterHistory",
+                "ssm:GetPatchBaseline",
+                "ssm:GetPatchBaselineForPatchGroup",
+                "ssm:GetServiceSetting",
                 "ssm:Put*",
                 "ssm:Modify*",
                 "ssm:Create*",
@@ -36,6 +57,21 @@
                 "secretsmanager:Validate*"
             ],
             "Resource": "*"
+        },
+        {
+            "Sid": "AllowReadPermissionsOnSsmParametersIfTagIsPresentAndYes",
+            "Effect": "Deny",
+            "Action": [
+                "ssm:GetParametersByPath",
+                "ssm:GetParameters",
+                "ssm:GetParameter"
+            ],
+            "Resource": "arn:aws:ssm:*:{{ item.item.account_id }}:parameter/*",
+            "Condition": {
+                "StringNotEquals": {
+                    "ssm:resourceTag/allowReadForReadlocalRole": "yes"
+                }
+            }
         },
         {
             "Effect": "Deny",
