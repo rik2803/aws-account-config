@@ -74,6 +74,24 @@
             }
         },
         {
+            "Sid": "AllowReadPermissionsOnS3IfTagIsPresentAndYes",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:GetParametersByPath",
+                "ssm:GetParameters",
+                "ssm:GetParameter"
+            ],
+            "Resource": [
+                "arn:aws:s3:::*",
+                "arn:aws:s3:::*/*"
+            ]
+            "Condition": {
+                "StringEquals": {
+                    "aws:resourceTag/allowReadForReadlocalRole": "yes"
+                }
+            }
+        },
+        {
             "Effect": "Deny",
             "Action": "*",
             "Resource": "*",
