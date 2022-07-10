@@ -77,9 +77,11 @@
             "Sid": "AllowReadPermissionsOnS3IfTagIsPresentAndYes",
             "Effect": "Allow",
             "Action": [
-                "ssm:GetParametersByPath",
-                "ssm:GetParameters",
-                "ssm:GetParameter"
+                "s3:GetBucketLocation",
+                "s3:GetObjectAcl",
+                "s3:ListBucket",
+                "s3:GetObject",
+                "s3:GetBucketTagging"
             ],
             "Resource": [
                 "arn:aws:s3:::*",
