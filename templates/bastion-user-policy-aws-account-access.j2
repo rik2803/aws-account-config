@@ -14,12 +14,13 @@
 {% if current_time <  accounts_valid_until %}
 {%   if current_time > accounts_valid_from %}
 {%     for account in accounts %}
-{%       for subaccount in subaccounts | default([]) -%}
-{%         if subaccount.name | regex_search(account.name) %}{{ account_list.append("arn:aws:iam::" + subaccount.account_id + ":role/" + account.role) }}{% endif %}
-{%-      endfor %}
-{%       for arn in role_arn_list | default([]) -%}
-{%         if arn.arn is defined %}{{ account_list.append(arn.arn) }}{% endif %}
-{%-      endfor %}
+{%       if account.role.startswith('arn:aws:iam:' -%}
+{{ account_list.append(account.role) }}
+{%-      else -%}
+{%         for subaccount in subaccounts | default([]) -%}
+{%           if subaccount.name | regex_search(account.name) %}{{ account_list.append("arn:aws:iam::" + subaccount.account_id + ":role/" + account.role) }}{% endif %}
+{%-        endfor %}
+{%-      endif %}
 {%     endfor %}
 {%   endif %}
 {% endif %}
