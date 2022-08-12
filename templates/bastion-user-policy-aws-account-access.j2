@@ -14,7 +14,7 @@
 {% if current_time <  accounts_valid_until %}
 {%   if current_time > accounts_valid_from %}
 {%     for account in accounts %}
-{%       if account.role.startswith('arn:aws:iam:' -%}
+{%       if account.role.startswith('arn:aws:iam:') -%}
 {{ account_list.append(account.role) }}
 {%-      else -%}
 {%         for subaccount in subaccounts | default([]) -%}
