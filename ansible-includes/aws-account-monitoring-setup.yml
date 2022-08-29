@@ -35,25 +35,24 @@
           role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrgAccAccRole') }}"
         register: "monitoring_assumed_role_subaccount_single"
         when: "subaccount_limit == 'all' or item.name.startswith(subaccount_limit)"
-        with_items:
-          - "{{ subaccounts }}"
+        loop: "{{ subaccounts|flatten(levels=1 }}"
 
       - name: Create CFN template from Ansible template for the monitoring setup on the subaccounts
         template:
           src: "CloudFormationTemplates/cfn-monitoring-for-subaccount.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}-{{ item[1] }}.yml"
         when: "subaccount_limit == 'all' or item[0].item.name.startswith(subaccount_limit)"
-        with_nested:
-          - "{{ monitoring_assumed_role_subaccount_single.results }}"
-          - "{{ aws_local_regions }}"
+        loop: "{{ monitoring_assumed_role_subaccount_single.results|product(aws_local_regions)|list }}"
+        loop_control:
+          label: "Create CFN template for monitoring setup on {{ item[0].item.name }}"
 
       - name: Linter check cloudformation stack monitoring setup on the subaccounts
         shell:
           cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}-{{ item[1] }}.yml"
         when: "subaccount_limit == 'all' or item[0].item.name.startswith(subaccount_limit)"
-        with_nested:
-          - "{{ monitoring_assumed_role_subaccount_single.results }}"
-          - "{{ aws_local_regions }}"
+        loop: "{{ monitoring_assumed_role_subaccount_single.results|product(aws_local_regions)|list }}"
+        loop_control:
+          label: "Linter check cloudformation stack monitoring setup on {{ item[0].item.name }}"
 
       - name: Create/Update Monitoring CloudFormation Stack on all accounts
         cloudformation:
@@ -66,9 +65,9 @@
           disable_rollback: false
           template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-monitoring-for-subaccount-{{ item[0].item.account_id }}-{{ item[1] }}.yml"
         when: "subaccount_limit == 'all' or item[0].item.name.startswith(subaccount_limit)"
-        with_nested:
-          - "{{ monitoring_assumed_role_subaccount_single.results }}"
-          - "{{ aws_local_regions }}"
+        loop: "{{ monitoring_assumed_role_subaccount_single.results|product(aws_local_regions)|list }}"
+        loop_control:
+          label: "Create/Update Monitoring CloudFormation Stack on {{ item[0].item.name }}"
 ### TODO: Temporarily limited to eu-central-1 because Lambda code on S3 should be in same region
 ### as the region where the function is created. Have to setup the S3 bucket in
 ### all regions in aws_local_regions and setup S3 replication
@@ -80,7 +79,7 @@
         register: async_monitoringcloudformationstack_jobs
         until: async_monitoringcloudformationstack_jobs.finished
         retries: 300
-        with_items: "{{ async_monitoringcloudformationstack.results | default([]) }}"
+        loop: "{{ async_monitoringcloudformationstack.results|default([])|flatten(levels=1) }}"
         when: "subaccount_limit == 'all' or item.item[0].item.name.startswith(subaccount_limit)"
 
     tags: [ 'monitoring', 'monitoring_subaccount' ]

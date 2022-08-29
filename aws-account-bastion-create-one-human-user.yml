@@ -99,7 +99,7 @@
     - name: "Set user dict to contain the data for the selected user"
       set_fact:
         user_data: "{{ item }}"
-      with_items: "{{ aws_users }}"
+      loop: "{{ aws_users|flatten(levels=1) }}"
       when: "item.name == user"
 
     - name: "Print user_data"

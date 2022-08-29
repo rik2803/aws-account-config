@@ -61,8 +61,7 @@
           role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrgAccAccRole') }}"
         register: "security_assumed_role_subaccount_single"
         when: "subaccount_limit == 'all' or item.name.startswith(subaccount_limit)"
-        with_items:
-          - "{{ subaccounts_and_bastion }}"
+        loop: "{{ subaccounts_and_bastion|flatten(levels=1) }}"
 
     when: security_account is defined
     tags: [ 'security', 'security_guardduty', 'security_subaccount', 'security_subaccount_service_accounts' ]
@@ -80,20 +79,26 @@
           path: "{{ config_basedir }}/ServiceAccountRoles/{{ item.item.name }}.yml"
         register: stat_sa_config
         when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
-        with_items: "{{ security_assumed_role_subaccount_single.results }}"
+        loop: "{{ security_assumed_role_subaccount_single.results|flatten(levels=1) }}"
+        loop_control:
+          label: "Check {{ item.item.name }} for ServiceAccount config file"
 
       - name: "Create CFN template from Ansible template for the ServiceAccounts security setup on the subaccounts (own config file)"
         template:
           src: "{{ config_basedir }}/ServiceAccountRoles/{{ item.item.item.name }}.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.item.name }}.yml"
-        with_items: "{{ stat_sa_config.results }}"
+        loop: "{{ stat_sa_config.results|flatten(levels=1) }}"
+        loop_control:
+          label: "Create CFN template for ServiceAccounts security setup on {{ item.item.item.name }} (own config file)"
         when: "item.stat is defined and item.stat.exists"
 
       - name: "Create CFN template from Ansible template for the ServiceAccounts security setup on the subaccounts (default config file)"
         template:
           src: "{{ config_basedir }}/ServiceAccountRoles/default.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.item.name }}.yml"
-        with_items: "{{ stat_sa_config.results }}"
+        loop: "{{ stat_sa_config.results|flatten(levels=1) }}"
+        loop_control:
+          label: "Create CFN template for ServiceAccounts security setup on {{ item.item.item.name }} (default config file)"
         when: "item.stat is defined and not item.stat.exists"
 
       - name: "Create CFN template from Ansible template for the ServiceAccounts security setup on the subaccounts (required config file)"
@@ -101,22 +106,25 @@
           src: "{{ config_basedir }}/ServiceAccountRoles/required.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.name }}-required.yml"
         when: "stat_required_config.stat.exists and (subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit))"
-        with_items:
-          - "{{ security_assumed_role_subaccount_single.results }}"
+        loop: "{{ security_assumed_role_subaccount_single.results|flatten(levels=1) }}"
+        loop_control:
+          label: "Create CFN template for ServiceAccounts security setup on {{ item.item.name }} (required config file)"
 
       - name: "Concat the generated required.yml file to the SA template for the account"
         shell: |
           cat {{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.name }}-required.yml >> {{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.name }}.yml
         when: "stat_required_config.stat.exists and (subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit))"
-        with_items:
-          - "{{ security_assumed_role_subaccount_single.results }}"
+        loop: "{{ security_assumed_role_subaccount_single.results|flatten(levels=1) }}"
+        loop_control:
+          label: "Concat required.yml to the SA template for {{ item.item.name }}"
 
       - name: "Linter check of Ansible template for the ServiceAccounts security setup on the subaccounts"
         shell: |
           cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.name }}.yml"
         when: "stat_required_config.stat.exists and (subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit))"
-        with_items:
-          - "{{ security_assumed_role_subaccount_single.results }}"
+        loop: "{{ security_assumed_role_subaccount_single.results|flatten(levels=0) }}"
+        loop_control:
+          label: "Linter check Ansible template for ServiceAccount security setup on {{ item.item.name }}"
 
       ### ServiceAccounts Stack for home region (eu-central-1)
       - name: Create/Update ServiceAccounts Security CloudFormation Stack on all accounts in (home) region eu-central-1
@@ -130,8 +138,9 @@
           disable_rollback: false
           template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.name }}.yml"
         when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
-        with_items:
-          - "{{ security_assumed_role_subaccount_single.results }}"
+        loop: "{{ security_assumed_role_subaccount_single.results|flatten(levels=0) }}"
+        loop_control:
+          label: "Create/Update ServiceAccounts Security CloudFormation Stack on {{ item.item.name }} in eu-central-1"
         register: async_createsecurityserviceaccountscloudformationstack
         async: 7200
         poll: 0
@@ -142,7 +151,7 @@
         register: async_createsecurityserviceaccountscloudformationstack_jobs
         until: async_createsecurityserviceaccountscloudformationstack_jobs.finished
         retries: 300
-        with_items: "{{ async_createsecurityserviceaccountscloudformationstack.results | default([]) }}"
+        loop: "{{ async_createsecurityserviceaccountscloudformationstack.results|default([])|flatten(levels=0) }}"
         when: "subaccount_limit == 'all' or item.item.item.name.startswith(subaccount_limit)"
 
     when: security_account is defined and bastion_account.service_accounts is defined
@@ -156,27 +165,35 @@
         template:
           src: "CloudFormationTemplates/cfn-security-for-subaccount-aws-config.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-for-subaccount-aws-config-{{ item.item.account_id }}.yml"
-        with_items: "{{ security_assumed_role_subaccount_single.results }}"
+        loop: "{{ security_assumed_role_subaccount_single.results|flatten(levels=0) }}"
+        loop_control:
+          label: "Create CFN template for the AWS Config settup on {{ item.item.name }}"
         when: "(skip_aws_config is undefined or not skip_aws_config) and (subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit))"
 
       - name: Linter check for the security setup on the subaccounts
         shell: |
           cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-serviceaccounts-for-subaccount-{{ item.item.item.name }}.yml"
-        with_items: "{{ stat_sa_config.results }}"
+        loop: "{{ stat_sa_config.results|flatten(levels=1) }}"
+        loop_control:
+          label: "Linter check security setup on {{ item.item.item.name }}"
         when: "(skip_aws_config is undefined or not skip_aws_config) and (subaccount_limit == 'all' or item.item.item.name.startswith(subaccount_limit))"
 
       - name: Create CFN template from Ansible template for the IAM security setup on the subaccounts
         template:
           src: "CloudFormationTemplates/cfn-security-for-subaccount-iam.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-iam-for-subaccount-{{ item.item.account_id }}.yml"
-        with_items: "{{ security_assumed_role_subaccount_single.results }}"
+        loop: "{{ security_assumed_role_subaccount_single.results|flatten(levels=0) }}"
+        loop_control:
+          label: "Create CFN template for IAM security setup on {{ item.item.name }}"
         when: "(skip_aws_config is undefined or not skip_aws_config) and (subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit))"
 
       - name: Create CFN template from Ansible template for the CloudTrail security setup on the subaccounts
         template:
           src: "CloudFormationTemplates/cfn-security-for-subaccount-cloudtrail.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-cloudtrail-for-subaccount-{{ item.item.account_id }}.yml"
-        with_items: "{{ security_assumed_role_subaccount_single.results }}"
+        loop: "{{ security_assumed_role_subaccount_single.results|flatten(levels=0) }}"
+        loop_control:
+          label: "Create CFN template for CloudTrail security setup on {{ item.item.name }}"
         when: "(skip_aws_cloudtrail is undefined or not skip_aws_cloudtrail) and (subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit))"
 
       ### Stack for all regions in aws_local_regions
@@ -190,9 +207,9 @@
           state: "present"
           disable_rollback: false
           template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-for-subaccount-aws-config-{{ item[0].item.account_id }}.yml"
-        with_nested:
-          - "{{ security_assumed_role_subaccount_single.results }}"
-          - "{{ aws_local_regions }}"
+        loop: "{{ security_assumed_role_subaccount_single.results|product(aws_local_regions)|list }}"
+        loop_control:
+          label: "Create/Update Security CloudFormation Stack on {{ item[0].item.name }} in {{ item[1] }}"
         register: async_createsecuritycloudformationstack
         async: 7200
         poll: 0
@@ -210,8 +227,9 @@
           disable_rollback: false
           template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-iam-for-subaccount-{{ item.item.account_id }}.yml"
         when: "(skip_aws_config is undefined or not skip_aws_config) and (subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit))"
-        with_items:
-          - "{{ security_assumed_role_subaccount_single.results }}"
+        loop: "{{ security_assumed_role_subaccount_single.results|flatten(levels=0) }}"
+        loop_control:
+          label: "Create/Update IAM Security CloudFormtion Stack on {{ item.item.name }} in eu-central-1"
         register: async_createsecurityiamcloudformationstack
         async: 7200
         poll: 0
@@ -228,8 +246,9 @@
           disable_rollback: false
           template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-security-cloudtrail-for-subaccount-{{ item.item.account_id }}.yml"
         when: "(skip_aws_cloudtrail is undefined or not skip_aws_cloudtrail) and (subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit))"
-        with_items:
-          - "{{ security_assumed_role_subaccount_single.results }}"
+        loop: "{{ security_assumed_role_subaccount_single.results|flatten(levels=0) }}"
+        loop_control:
+          label: "Create/Update CloudTrail Security CloudFormation Stack on {{ item.item.name }} in eu-central-1"
         register: async_createsecuritycloudtrailcloudformationstack
         async: 7200
         poll: 0
@@ -240,7 +259,7 @@
         register: async_createsecuritycloudformationstack_jobs
         until: async_createsecuritycloudformationstack_jobs.finished
         retries: 300
-        with_items: "{{ async_createsecuritycloudformationstack.results | default([]) }}"
+        loop: "{{ async_createsecuritycloudformationstack.results|default([])|flatten(levels=1) }}"
         when: "(skip_aws_config is undefined or not skip_aws_config) and item.ansible_job_id is defined and (subaccount_limit == 'all' or item.item[0].item.name.startswith(subaccount_limit))"
 
       - name: Debug
@@ -252,7 +271,7 @@
         register: async_createsecurityiamcloudformationstack_jobs
         until: async_createsecurityiamcloudformationstack_jobs.finished
         retries: 300
-        with_items: "{{ async_createsecurityiamcloudformationstack.results | default([]) }}"
+        loop: "{{ async_createsecurityiamcloudformationstack.results|default([])|flatten(levels=1) }}"
         when: "(skip_aws_config is undefined or not skip_aws_config) and item.ansible_job_id is defined and (subaccount_limit == 'all' or item.item.item.name.startswith(subaccount_limit))"
 
       - name: Wait for async_createsecuritycloudtrailcloudformationstack tasks to finish
@@ -260,7 +279,7 @@
         register: async_createsecuritycloudtrailcloudformationstack_jobs
         until: async_createsecuritycloudtrailcloudformationstack_jobs.finished
         retries: 300
-        with_items: "{{ async_createsecuritycloudtrailcloudformationstack.results | default([]) }}"
+        loop: "{{ async_createsecuritycloudtrailcloudformationstack.results|default([])|flatten(levels=1) }}"
         when: "(skip_aws_cloudtrail is undefined or not skip_aws_cloudtrail) and item.ansible_job_id is defined and (subaccount_limit == 'all' or item.item.item.name.startswith(subaccount_limit))"
 
     when: security_account is defined
