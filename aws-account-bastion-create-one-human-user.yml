@@ -100,6 +100,8 @@
       set_fact:
         user_data: "{{ item }}"
       loop: "{{ aws_users|flatten(levels=1) }}"
+      loop_control:
+        label: "Set user dict for {{ item.name }}"
       when: "item.name == user"
 
     - name: "Print user_data"
