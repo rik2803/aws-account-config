@@ -119,7 +119,7 @@
             policy_name: "AssumeRole"
             policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-environment.json.j2') }}"
             state: present
-          loop: "{{ aws_groups|prodcut(environments | default([]))|list }}"
+          loop: "{{ aws_groups|product(environments | default([]))|list }}"
           loop_control:
             label: "Create IAM AssumeRole environment policy for {{ item[0].name }}-{{ item[1] }}"
           register: async_createassumeroleenvpolicies
