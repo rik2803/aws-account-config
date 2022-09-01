@@ -35,7 +35,9 @@
           role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrgAccAccRole') }}"
         register: "monitoring_assumed_role_subaccount_single"
         when: "subaccount_limit == 'all' or item.name.startswith(subaccount_limit)"
-        loop: "{{ subaccounts|flatten(levels=1 }}"
+        loop: "{{ subaccounts|flatten(levels=1) }}"
+        loop_control:
+          label: "Assumed role {{ item.name }}"
 
       - name: Create CFN template from Ansible template for the monitoring setup on the subaccounts
         template:
@@ -80,6 +82,8 @@
         until: async_monitoringcloudformationstack_jobs.finished
         retries: 300
         loop: "{{ async_monitoringcloudformationstack.results|default([])|flatten(levels=1) }}"
+        loop_control:
+          label: "Created/Updated Monitoring CloudFormation Stack on {{ item.item[0].item.name }}"
         when: "subaccount_limit == 'all' or item.item[0].item.name.startswith(subaccount_limit)"
 
     tags: [ 'monitoring', 'monitoring_subaccount' ]

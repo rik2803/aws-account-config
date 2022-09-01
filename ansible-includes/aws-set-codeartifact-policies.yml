@@ -42,7 +42,7 @@
           AWS_SECRET_ACCESS_KEY: "{{ tooling_assumed_role.sts_creds.secret_key }}"
           AWS_SESSION_TOKEN: "{{ tooling_assumed_role.sts_creds.session_token }}"
           AWS_DEFAULT_REGION: "{{ item.region | default('eu-central-1') }}"
-        loop: "{{ codeartifact.domains|flatte(levels=1) }}"
+        loop: "{{ codeartifact.domains|flatten(levels=1) }}"
         loop_control:
           label: "Set domain policy for {{ item.name }}"
 
