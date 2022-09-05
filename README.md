@@ -259,6 +259,16 @@ ansible-playbook aws-account-setup.yml \
     --tags=bb
 ```
 
+## Setup for local development
+
+```bash
+python3 -m venv ./venv
+pip install boto boto3 ansible
+. ./venv/bin/activate
+ansible-galaxy collection install amazon.aws:1.5.1
+ansible-galaxy collection install community.aws:1.5.0
+```
+
 ### Create the HTML page with the x-account links
 
 ```

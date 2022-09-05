@@ -106,7 +106,7 @@
     - name: Print all subaccount names
       debug:
         msg: "{{ item.name }}"
-      with_items: "{{ subaccounts_and_bastion }}"
+      loop: "{{ subaccounts_and_bastion|flatten(levels=1) }}"
       tags: [ 'accountlist' ]
     - name: Import basic account setup tasks
       import_tasks: ansible-includes/aws-account-basic-setup.yml

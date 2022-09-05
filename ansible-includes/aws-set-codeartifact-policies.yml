@@ -42,8 +42,9 @@
           AWS_SECRET_ACCESS_KEY: "{{ tooling_assumed_role.sts_creds.secret_key }}"
           AWS_SESSION_TOKEN: "{{ tooling_assumed_role.sts_creds.session_token }}"
           AWS_DEFAULT_REGION: "{{ item.region | default('eu-central-1') }}"
-        with_items:
-          - "{{ codeartifact.domains }}"
+        loop: "{{ codeartifact.domains|flatten(levels=1) }}"
+        loop_control:
+          label: "Set domain policy for {{ item.name }}"
 
       - name: Set repository policies
         shell: |
@@ -57,7 +58,7 @@
           AWS_SECRET_ACCESS_KEY: "{{ tooling_assumed_role.sts_creds.secret_key }}"
           AWS_SESSION_TOKEN: "{{ tooling_assumed_role.sts_creds.session_token }}"
           AWS_DEFAULT_REGION: "{{ item.region | default('eu-central-1') }}"
-        with_subelements:
-          - "{{ codeartifact.domains }}"
-          -  "repositories"
+        loop: "{{ codeartifact.domains|subelements('repositories') }}"
+        loop_control:
+          label: "Set repository policies on {{ item.1 }} for {{ item.0.name }}"
 

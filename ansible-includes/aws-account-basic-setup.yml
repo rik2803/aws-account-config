@@ -8,7 +8,7 @@
     - name: Print all aws_users names
       debug:
         msg: "{{ item.name }}"
-      with_items: "{{ aws_users }}"
+      loop: "{{ aws_users|flatten(levels=1) }}"
       tags: [ 'userlist' ]
 
     ### Specific Bastion Setup
@@ -49,9 +49,9 @@
             security_token: "{{ assumed_role.sts_creds.session_token }}"
             name: "{{ item[0].name }}-{{ item[1].name }}"
             state: present
-          with_nested:
-            - "{{ aws_groups }}"
-            - "{{ subaccounts }}"
+          loop: "{{ aws_groups|product(subaccounts)|list }}"
+          loop_control:
+            label: "Create IAM group {{ item[0].name }}-{{ item[1].name }} in the bastion account"
           register: async_creategroups
           async: 7200
           poll: 0
@@ -61,7 +61,9 @@
           register: async_creategroups_jobs
           until: async_creategroups_jobs.finished
           retries: 300
-          with_items: "{{ async_creategroups.results }}"
+          loop: "{{ async_creategroups.results|flatten(levels=1) }}"
+          loop_control:
+            label: "Created IAM group {{ item.item[0].name }}-{{ item.item[1].name }}"
           tags: [ 'bastion', 'bastion_groups' ]
 
         - name: Create default groups for the environments in the bastion account
@@ -71,9 +73,9 @@
             security_token: "{{ assumed_role.sts_creds.session_token }}"
             name: "{{ item[0] }}-{{ item[1] }}"
             state: present
-          with_nested:
-            - "{{ group_names }}"
-            - "{{ environments | default([]) }}"
+          loop: "{{ group_names|product(environments | default([]))|list }}"
+          loop_control:
+            label: "Create IAM group {{ item[0] }}-{{ item[1] }} for the environments in the bastion account"
           register: async_createdefaultgroups
           async: 7200
           poll: 0
@@ -83,7 +85,9 @@
           register: async_createdefaultgroups_jobs
           until: async_createdefaultgroups_jobs.finished
           retries: 300
-          with_items: "{{ async_createdefaultgroups.results }}"
+          loop: "{{ async_createdefaultgroups.results|flatten(levels=1) }}"
+          loop_control:
+            label: "Created IAM group {{ item.item[0] }}-{{ item.item[1] }}"
           tags: [ 'bastion', 'bastion_groups' ]
 
         - name: Create default groups for the entities in the bastion account
@@ -93,9 +97,9 @@
             security_token: "{{ assumed_role.sts_creds.session_token }}"
             name: "{{ item[0] }}-{{ item[1] }}"
             state: present
-          with_nested:
-            - "{{ group_names }}"
-            - "{{ entities | default([]) }}"
+          loop: "{{ group_names|product(entities | default([]))|list }}"
+          loop_control:
+            label: "Create IAM group {{ item[0] }}-{{ item[1] }} for the entities in the bastion account"
           register: async_createentitiesgroups
           async: 7200
           poll: 0
@@ -105,7 +109,9 @@
           register: async_createentitiesgroups_jobs
           until: async_createentitiesgroups_jobs.finished
           retries: 300
-          with_items: "{{ async_createentitiesgroups.results }}"
+          loop: "{{ async_createentitiesgroups.results|flatten(levels=1) }}"
+          loop_control:
+            label: "Created IAM group {{ item.item[0] }}-{{ item.item[1] }}"
           tags: [ 'bastion', 'bastion_groups' ]
 
         ### There might be environments (i.e. tst) that have no associated account, that's OK
@@ -119,9 +125,9 @@
             policy_name: "AssumeRole"
             policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-environment.json.j2') }}"
             state: present
-          with_nested:
-            - "{{ aws_groups }}"
-            - "{{ environments | default([]) }}"
+          loop: "{{ aws_groups|product(environments | default([]))|list }}"
+          loop_control:
+            label: "Create IAM AssumeRole environment policy for {{ item[0].name }}-{{ item[1] }}"
           register: async_createassumeroleenvpolicies
           failed_when: false
           async: 7200
@@ -133,7 +139,9 @@
           until: async_createassumeroleenvpolicies_jobs.finished
           retries: 300
           failed_when: false
-          with_items: "{{ async_createassumeroleenvpolicies.results }}"
+          loop: "{{ async_createassumeroleenvpolicies.results|flatten(levels=1) }}"
+          loop_control:
+            label: "Create IAM AssumeRole environment policy for {{ item.item[0].name }}-{{ item.item[1] }}"
           tags: [ 'bastion', 'bastion_groups' ]
 
         - name: Create policies for Assume<Role>-<entity> and assign to the respective groups
@@ -146,9 +154,9 @@
             policy_name: "AssumeRole"
             policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-entity.json.j2') }}"
             state: present
-          with_nested:
-            - "{{ aws_groups }}"
-            - "{{ entities | default([]) }}"
+          loop: "{{ aws_groups|product(entities | default([]))|list }}"
+          loop_control:
+            label: "Create IAM AssumeRole entity policy for {{ item[0].name }}-{{ item[1] }}"
           register: async_createassumeroleorgpolicies
           async: 7200
           poll: 0
@@ -158,7 +166,9 @@
           register: async_createassumeroleorgpolicies_jobs
           until: async_createassumeroleorgpolicies_jobs.finished
           retries: 300
-          with_items: "{{ async_createassumeroleorgpolicies.results }}"
+          loop: "{{ async_createassumeroleorgpolicies.results|flatten(levels=1) }}"
+          loop_control:
+            label: "Created IAM AssumeRole entity policy for {{ item.item[0].name }}-{{ item.item[1] }}"
           tags: [ 'bastion', 'bastion_groups' ]
 
         - name: Assign policies to groups in the bastion account
@@ -171,9 +181,9 @@
             policy_name: "AssumeRole"
             policy_json: "{{ lookup('template', 'bastion-group-policy-one-to-one.json.j2') }}"
             state: present
-          with_nested:
-            - "{{ aws_groups }}"
-            - "{{ subaccounts }}"
+          loop: "{{ aws_groups|product(subaccounts)|list }}"
+          loop_control:
+            label: "Assign AssumeRole policy to group {{ item[0].name }}-{{ item[1].name }} in the bastion account"
           register: async_assignpoliciestogroups
           async: 7200
           poll: 0
@@ -183,7 +193,9 @@
           register: async_assignpoliciestogroups_jobs
           until: async_assignpoliciestogroups_jobs.finished
           retries: 300
-          with_items: "{{ async_assignpoliciestogroups.results }}"
+          loop: "{{ async_assignpoliciestogroups.results|flatten(levels=1) }}"
+          loop_control:
+            label: "Assigned AssumeRole policy to group {{ item.item[0].name }}-{{ item.item[1].name }}"
           tags: [ 'bastion_grouppolicy', 'bastion', 'bastion_groups' ]
 
       when: "skip_account_group_creation is not defined or not skip_account_group_creation"
@@ -196,9 +208,9 @@
         security_token: "{{ assumed_role.sts_creds.session_token }}"
         name: "{{ item }}"
         state: present
-      with_items:
-        - Admin
-        - ManageYourOwnUser
+      loop: "{{ ['Admin', 'ManageYourOwnUser']|flatten(1) }}"
+      loop_control:
+        label: "Create IAM {{ item }} group in the bastion account"
       tags: [ 'bastion', 'bastion_groups' ]
 
     - name: Create custom groups in the bastion account
@@ -208,7 +220,9 @@
         security_token: "{{ assumed_role.sts_creds.session_token }}"
         name: "{{ item.name }}"
         state: present
-      with_items: "{{ custom_groups }}"
+      loop: "{{ custom_groups|flatten(levels=1) }}"
+      loop_control:
+        label: "Create custom IAM group {{ item.name }} in the bastion account"
       when: "custom_groups is defined"
       tags: [ 'bastion', 'bastion_custom_groups', 'bastion_groups' ]
 
@@ -220,9 +234,10 @@
         policy_name: "AWSAccountAccessFor-{{ item.name }}"
         state: "{{ item.state | default('present') }}"
         policy: "{{ lookup('template', 'templates/bastion-user-policy-aws-account-access.j2') }}"
-      with_items: "{{ aws_users }}"
+      loop: "{{ aws_users|flatten(levels=1) }}"
       when: aws_users is defined
       loop_control:
+        label: "Create managed policy 'AWSAccountAccessFor-{{ item.name }}'"
         pause: 2
       register: async_create_account_access_managed_policy
       async: 7200
@@ -233,7 +248,9 @@
       register: async_create_account_access_managed_policy_jobs
       until: async_create_account_access_managed_policy_jobs.finished
       retries: 300
-      with_items: "{{ async_create_account_access_managed_policy.results }}"
+      loop: "{{ async_create_account_access_managed_policy.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Created managed policy for {{ item.item.name }}"
       tags: [ 'bastion', 'create_users', 'create_aws_account_policy' ]
 
     - name: Create users in the bastion account
@@ -248,11 +265,11 @@
           - ManageYourOwnUser
         update_password: on_create
         password: "{{ item.initial_password | default('Change_0n_login') }}"
-      with_items: "{{ aws_users }}"
+      loop: "{{ aws_users|flatten(levels=1) }}"
       when: aws_users is defined
       loop_control:
+        label: "Create user {{ item.name }}"
         pause: 2
-      no_log: True
       register: async_createawsusers
       async: 7200
       poll: 0
@@ -262,7 +279,9 @@
       register: async_createawsusers_jobs
       until: async_createawsusers_jobs.finished
       retries: 300
-      with_items: "{{ async_createawsusers.results }}"
+      loop: "{{ async_createawsusers.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Created {{ item.item.name }} in the bastion account"
       tags: [ 'bastion', 'create_users' ]
 
     - name: Attach managed policies to users
@@ -274,9 +293,10 @@
         state: "{{ item.state | default('present') }}"
         managed_policy:
           - "AWSAccountAccessFor-{{ item.name }}"
-      with_items: "{{ aws_users }}"
+      loop: "{{ aws_users|flatten(levels=1) }}"
       when: aws_users is defined
       loop_control:
+        label: "Attach AWSAccountAccessFor-{{ item.name }} to {{ item.name }}"
         pause: 2
       register: async_attach_managed_policies_to_user
       async: 7200
@@ -287,7 +307,9 @@
       register: async_attach_managed_policies_to_user_jobs
       until: async_attach_managed_policies_to_user_jobs.finished
       retries: 300
-      with_items: "{{ async_attach_managed_policies_to_user.results }}"
+      loop: "{{ async_attach_managed_policies_to_user.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Attached AWSAccountAccessFor-{{ item.item.name }} to {{ item.item.name }}"
       tags: [ 'bastion', 'create_users', 'create_aws_account_policy' ]
 
     - name: Create inline policy for user to allow to assume timeboxed roles on all accounts
@@ -300,9 +322,10 @@
         policy_name: "assume-timeboxed-roles"
         state: "{{ item.state | default('present') }}"
         policy_json: "{{ lookup('template', 'templates/bastion-user-policy-assume-timeboxed-role.j2') }}"
-      with_items: "{{ aws_users }}"
+      loop: "{{ aws_users|flatten(levels=1) }}"
       when: "aws_users is defined and (item.state is not defined or item.state != 'absent')"
       loop_control:
+        label: "Create inline IAM policy for {{ item.name }}"
         pause: 2
       tags: [ 'bastion', 'create_users' ]
 
@@ -315,7 +338,9 @@
         name: "{{ item.name }}"
         groups: "{{ (item.groups | default([])) + (default_groups | default([])) }}"
         state: update
-      with_items: "{{ aws_users }}"
+      loop: "{{ aws_users|flatten(levels=1) }}"
+      loop_control:
+        label: "Assign {{ item.name }} to groups"
       when: "aws_users is defined and (item.groups is not defined or 'Admin' not in item.groups) and (item.state is not defined or item.state != 'absent')"
       tags: [ 'bastion', 'create_users', 'assign_users_to_groups' ]
 
@@ -328,7 +353,9 @@
         name: "{{ item.name }}"
         groups: "{{ item.groups | default([]) }}"
         state: update
-      with_items: "{{ aws_users }}"
+      loop: "{{ aws_users|flatten(levels=1) }}"
+      loop_control:
+        label: "Assign {{ item.name }} to groups"
       when: "aws_users is defined and item.groups is defined and 'Admin' in item.groups and (item.state is not defined or item.state != 'absent')"
       tags: [ 'bastion', 'create_users', 'assign_users_to_groups' ]
 
@@ -342,7 +369,9 @@
         policy_name: "AssumeRole"
         policy_json: "{{ lookup('template', 'bastion-group-policy-custom.json.j2') }}"
         state: present
-      with_items: "{{ custom_groups }}"
+      loop: "{{ custom_groups|flatten(levels=1) }}"
+      loop_control:
+        label: "Create custom AssumeRole policy for group {{ item.name }}"
       when: "custom_groups is defined"
       register: async_createassumerolecustompolicies
       async: 7200
@@ -353,7 +382,9 @@
       register: async_createassumerolecustompolicies_jobs
       until: async_createassumerolecustompolicies_jobs.finished
       retries: 300
-      with_items: "{{ async_createassumerolecustompolicies.results }}"
+      loop: "{{ async_createassumerolecustompolicies.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Created custom AssumeRole policy for group {{ item.item.name }}"
       when: "custom_groups is defined"
       tags: [ 'bastion', 'bastion_custom_groups' ]
 
@@ -414,8 +445,9 @@
         role_arn: "arn:aws:iam::{{ item.account_id }}:role/{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrgAccAccRole') }}"
       register: "assumed_role_subaccount_single"
-      with_items:
-        - "{{ subaccounts }}"
+      loop: "{{ subaccounts|flatten(levels=1) }}"
+      loop_control:
+        label: "Assumed role {{ item.name }}"
       when: "bastion_account.account_id != item.account_id and ( subaccount_limit == 'all' or item.name.startswith(subaccount_limit) )"
       tags:
         - 'subaccounts'
@@ -453,7 +485,9 @@
         AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
         AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
         AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
-      with_items: "{{ assumed_role_subaccount_single.results }}"
+      loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Set password policy rules on {{ item.item.name }}"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       tags: [ 'subaccounts', 'passwordpolicy' ]
 
@@ -466,7 +500,9 @@
         AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
         AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
         AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
-      with_items: "{{ assumed_role_subaccount_single.results }}"
+      loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Set temp account alias {{ item.item.alias | default(item.item.name) | replace('.', '-') }}-temp"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       tags: [ 'subaccounts', 'accountalias' ]
     - name: "Set account alias - step 2: use final alias name"
@@ -478,7 +514,9 @@
         AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
         AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
         AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
-      with_items: "{{ assumed_role_subaccount_single.results }}"
+      loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Set final account alias {{ item.item.alias | default(item.item.name) | replace('.', '-') }}"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       tags: [ 'subaccounts', 'accountalias' ]
 
@@ -490,7 +528,9 @@
         AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
         AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
         AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
-      with_items: "{{ assumed_role_subaccount_single.results }}"
+      loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Create IAM Service Linked Role for ECS on {{ item.item.name }}"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       tags: [ 'subaccounts', 'servicelinkedrole' ]
       failed_when: false
@@ -506,6 +546,8 @@
         aws_secret_key: "{{ item.0.sts_creds.secret_key }}"
         security_token: "{{ item.0.sts_creds.session_token }}"
       loop: "{{ assumed_role_subaccount_single.results | subelements('item.ssm_parameters', skip_missing=True) }}"
+      loop_control:
+        label: "Create SSM parameters on {{ item.0.item.name }}"
       when: "bastion_account.account_id != item.0.item.account_id and ( subaccount_limit == 'all' or item.0.item.name.startswith(subaccount_limit) )"
       tags: [ 'subaccounts', 'ssm_parameters' ]
       failed_when: false
@@ -520,7 +562,9 @@
         policy_name: "AdministratorAccessLocal"
         policy: "{{ lookup('template', 'AdministratorAccessLocal.json.j2') }}"
         state: present
-      with_items: "{{ assumed_role_subaccount_single.results }}"
+      loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Create AdministratorAccessLocal policy on {{ item.item.name }}"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       register: async_AdministratorAccessLocal
       async: 7200
@@ -531,7 +575,9 @@
       register: async_AdministratorAccessLocal_jobs
       until: async_AdministratorAccessLocal_jobs.finished
       retries: 300
-      with_items: "{{ async_AdministratorAccessLocal.results | default([]) }}"
+      loop: "{{ async_AdministratorAccessLocal.results|default([])|flatten(levels=1) }}"
+      loop_control:
+        label: "Created AdministratorAccessLocal policy on {{ item.item.item.name }}"
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
@@ -543,7 +589,9 @@
         policy_name: "PowerUserAccessLocal"
         policy: "{{ lookup('template', 'PowerUserAccessLocal.json.j2') }}"
         state: present
-      with_items: "{{ assumed_role_subaccount_single.results }}"
+      loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Create PowerUserAccessLocal policy on {{ item.item.name }}"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       register: async_PowerUserAccessLocal
       async: 7200
@@ -554,7 +602,9 @@
       register: async_PowerUserAccessLocal_jobs
       until: async_PowerUserAccessLocal_jobs.finished
       retries: 300
-      with_items: "{{ async_PowerUserAccessLocal.results | default([]) }}"
+      loop: "{{ async_PowerUserAccessLocal.results|default([])|flatten(levels=1) }}"
+      loop_control:
+        label: "Created PowerUserAccessLocal policy on {{ item.item.item.name }}"
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
@@ -566,7 +616,9 @@
         policy_name: "ReadOnlyAccessLocal"
         policy: "{{ lookup('template', 'ReadOnlyAccessLocal.json.j2') }}"
         state: present
-      with_items: "{{ assumed_role_subaccount_single.results }}"
+      loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Create ReadOnlyAccessLocal policy on {{ item.item.name }}"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       register: async_ReadOnlyAccessLocal
       async: 7200
@@ -577,7 +629,9 @@
       register: async_ReadOnlyAccessLocal_jobs
       until: async_ReadOnlyAccessLocal_jobs.finished
       retries: 300
-      with_items: "{{ async_ReadOnlyAccessLocal.results | default([]) }}"
+      loop: "{{ async_ReadOnlyAccessLocal.results|default([])|flatten(levels=1) }}"
+      loop_control:
+        label: "Created ReadOnlyAccessLocal policy on {{ item.item.item.name }}"
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
@@ -589,7 +643,9 @@
         policy_name: "RdsPerformanceInsightsAccess"
         policy: "{{ lookup('template', 'RdsPerformanceInsightsAccess.json.j2') }}"
         state: present
-      with_items: "{{ assumed_role_subaccount_single.results }}"
+      loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Create RdsPerformanceInsightsAccess policy on {{ item.item.name }}"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       register: async_RdsPerformanceInsightsAccess
       async: 7200
@@ -600,7 +656,9 @@
       register: async_RdsPerformanceInsightsAccess_jobs
       until: async_RdsPerformanceInsightsAccess_jobs.finished
       retries: 300
-      with_items: "{{ async_RdsPerformanceInsightsAccess.results | default([]) }}"
+      loop: "{{ async_RdsPerformanceInsightsAccess.results|default([])|flatten(levels=1) }}"
+      loop_control:
+        label: "Created RdsPerformanceInsightsAccess policy on {{ item.item.item.name }}"
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization' ]
 
@@ -612,7 +670,9 @@
         policy_name: "SSMSessionAccountConfig"
         policy: "{{ lookup('template', 'SSMSessionAccountConfig.json.j2') }}"
         state: present
-      with_items: "{{ assumed_role_subaccount_single.results }}"
+      loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Create SSMSessionAccountConfig policy on {{ item.item.name }}"
       when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
       register: async_SSMSessionAccountConfig
       async: 7200
@@ -623,20 +683,22 @@
       register: async_SSMSessionAccountConfig_jobs
       until: async_SSMSessionAccountConfig_jobs.finished
       retries: 300
-      with_items: "{{ async_SSMSessionAccountConfig.results | default([]) }}"
+      loop: "{{ async_SSMSessionAccountConfig.results|default([])|flatten(levels=1) }}"
+      loop_control:
+        label: "Created SSMSessionAccountConfig policy on {{ item.item.item.name }}"
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization', 'SSMSessionAccountConfig' ]
 
     ### This assumes #aws_roles time a role per account, because these will be used in the
-    ### a loop to create all roles on all subaccounts.
+    ### loop to create all roles on all subaccounts.
     - name: Assume role for subaccounts
       sts_assume_role:
         role_arn: "arn:aws:iam::{{ item[0].account_id }}:role/{{ item[0].sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "{{ item[0].name }}-{{ item[0].sts_role | default('OrgAccAccRole') }}"
       register: "assumed_role_subaccount"
-      with_nested:
-        - "{{ subaccounts }}"
-        - "{{ aws_roles }}"
+      loop: "{{ subaccounts|product(aws_roles)|list }}"
+      loop_control:
+        label: "Assumed role {{ item[0].name }}"
       when: "bastion_account.account_id != item[0].account_id and ( subaccount_limit == 'all' or item[0].name.startswith(subaccount_limit) )"
       tags: [ 'subaccounts', 'createroles' ]
 
@@ -650,7 +712,9 @@
         managed_policy: "{{ item.item[1].managed_policies }}"
         state: present
       #no_log: True
-      with_items: "{{ assumed_role_subaccount.results }}"
+      loop: "{{ assumed_role_subaccount.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Create IAM role {{ item.item[1].name }} for trusted access from the bastion account on {{ item.item[0].name }}"
       when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or item.item[0].name.startswith(subaccount_limit) )"
       register: async_createroletrustedaccess
       async: 7200
@@ -661,7 +725,9 @@
       register: async_createroletrustedaccess_jobs
       until: async_createroletrustedaccess_jobs.finished
       retries: 300
-      with_items: "{{ async_createroletrustedaccess.results | default([]) }}"
+      loop: "{{ async_createroletrustedaccess.results|default([])|flatten(levels=1) }}"
+      loop_control:
+        label: "Created IAM role {{ item.item.item[1].name }} on {{ item.item.item[0].name }}"
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles' ]
 
@@ -674,7 +740,9 @@
         AWS_SECRET_ACCESS_KEY: "{{ item.sts_creds.secret_key }}"
         AWS_SESSION_TOKEN: "{{ item.sts_creds.session_token }}"
         AWS_DEFAULTREGION: "{{ item.region | default('eu-central-1') }}"
-      with_items: "{{ assumed_role_subaccount.results }}"
+      loop: "{{ assumed_role_subaccount.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Set the SDK/CLI session duration for {{ item.item[1].name }} role on account {{ item.item[0].name }}"
       when: "bastion_account.account_id != item.item[0].account_id and ( subaccount_limit == 'all' or item.item[0].name.startswith(subaccount_limit) )"
       register: async_setsessionduration
       async: 7200
@@ -685,7 +753,9 @@
       register: async_setsessionduration_jobs
       until: async_setsessionduration_jobs.finished
       retries: 300
-      with_items: "{{ async_setsessionduration.results | default([]) }}"
+      loop: "{{ async_setsessionduration.results|default([])|flatten(levels=1) }}"
+      loop_control:
+        label: "Finished setting session duration for {{ item.item.item[1].name }} role on account {{ item.item.item[0].name }}"
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles' ]
 
@@ -698,9 +768,9 @@
         key_material: "{{ item[0].item.pubkey }}"
         region: "{{ item[1] }}"
         state: present
-      with_nested:
-        - "{{ assumed_role_subaccount_single.results }}"
-        - "{{ aws_local_regions }}"
+      loop: "{{ assumed_role_subaccount_single.results|product(aws_local_regions)|list }}"
+      loop_control:
+        label: "Upload pubkey from {{ item[0].item.name }}"
       when: "bastion_account.account_id != item[0].item.account_id and ( subaccount_limit == 'all' or item[0].item.name.startswith(subaccount_limit) ) and item[0].item.pubkey is defined"
       register: async_uploadaccountpubkey
       async: 7200
@@ -711,7 +781,9 @@
       register: async_uploadaccountpubkey_jobs
       until: async_uploadaccountpubkey_jobs.finished
       retries: 300
-      with_items: "{{ async_uploadaccountpubkey.results | default([]) }}"
+      loop: "{{ async_uploadaccountpubkey.results|default([])|flatten(levels=1) }}"
+      loop_control:
+        label: "Uploaded pubkey from {{ item.item[0].item.name }}"
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'keypair' ]
 
@@ -763,13 +835,17 @@
           template:
             src: "CloudFormationTemplates/cfn-budget-alerts.yml"
             dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-budget-alerts-{{ item.item.account_id }}.yml"
-          with_items: "{{ assumed_role_subaccount_single.results }}"
+          loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+          loop_control:
+            label: "Create CFN template on {{ item.item.name }}"
           when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
 
         - name: Linter check for the budget alerts on the subaccounts
           shell: |
             cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-budget-alerts-{{ item.item.account_id }}.yml"
-          with_items: "{{ assumed_role_subaccount_single.results }}"
+          loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+          loop_control:
+            label: "Linter check for budget alerts on {{ item.item.name }}"
           when: "subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit)"
 
         - name: Create/Update Budget Alert Stack on all accounts
@@ -782,8 +858,9 @@
             state: "present"
             disable_rollback: false
             template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-budget-alerts-{{ item.item.account_id }}.yml"
-          with_items:
-            - "{{ assumed_role_subaccount_single.results }}"
+          loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+          loop_control:
+            label: "Create/Update Budget alert Stack on {{ item.item.name }}"
           register: async_createbudgetalertscloudformationstack
           async: 7200
           poll: 0
@@ -795,7 +872,9 @@
           register: async_createbudgetalertscloudformationstack_jobs
           until: async_createbudgetalertscloudformationstack_jobs.finished
           retries: 300
-          with_items: "{{ async_createbudgetalertscloudformationstack.results | default([]) }}"
+          loop: "{{ async_createbudgetalertscloudformationstack.results|default([])|flatten(levels=1) }}"
+          loop_control:
+            label: "Created/Updated Budget alert Stack on {{ item.item.item.name }}"
           when: "subaccount_limit == 'all' or item.item.item.name.startswith(subaccount_limit)"
 
       when: "budget_alerts is defined and budget_alerts.notification_emails is defined"
