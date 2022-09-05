@@ -19,12 +19,12 @@
         template:
           src: "CloudFormationTemplates/cfn-setup-for-tooling-subaccount.yml"
           dest: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}-{{ item }}.yml"
-        with_items: "{{ aws_local_regions }}"
+        loop: "{{ aws_local_regions|flatten(levels=1) }}"
 
       - name: Linter check cloudformation stack tooling subaccount setup
         shell:
           cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}-{{ item }}.yml"
-        with_items: "{{ aws_local_regions }}"
+        loop: "{{ aws_local_regions|flatten(levels=1) }}"
 
       - name: Create/Update Tooling CloudFormation Stack on tooling accounts
         cloudformation:
@@ -36,7 +36,7 @@
           state: "present"
           disable_rollback: false
           template: "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-for-tooling-subaccount-{{ tooling_account.account_id }}-{{ item }}.yml"
-        with_items: "{{ aws_local_regions }}"
+        loop: "{{ aws_local_regions|flatten(levels=1) }}"
 
     when: "tooling_account is defined and tooling_account.account_id is defined"
 
@@ -51,7 +51,7 @@
           - name: Linter check cloudformation stack roles to be assumed by ecr deploy user accounts
             shell:
               cfn-lint --ignore-checks={{ lint_ignore_list | default('') }} "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-ecr-deploy-user-roles-for-tooling.yml"
-            with_items: "{{ aws_local_regions }}"
+            loop: "{{ aws_local_regions|flatten(levels=1) }}"
           - name: Put CFN template for ecr deploy user roles on s3
             shell: |
               aws s3 cp "{{ generated_files_dir | default('generated-files') }}/cfn-{{ organization.name }}-setup-ecr-deploy-user-roles-for-tooling.yml" \
