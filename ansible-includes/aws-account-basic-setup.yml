@@ -696,7 +696,7 @@
         role_arn: "arn:aws:iam::{{ item[0].account_id }}:role/{{ item[0].sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "{{ item[0].name }}-{{ item[0].sts_role | default('OrgAccAccRole') }}"
       register: "assumed_role_subaccount"
-      loop: "{{ subaccounts|product(aws_roles)|list }}"
+      loop: "{{ subaccounts|product(aws_roles)|list|unique }}"
       loop_control:
         label: "Assumed role {{ item[0].name }}"
       when: "bastion_account.account_id != item[0].account_id and ( subaccount_limit == 'all' or item[0].name.startswith(subaccount_limit) )"
@@ -770,7 +770,7 @@
         state: present
       loop: "{{ assumed_role_subaccount_single.results|product(aws_local_regions)|list }}"
       loop_control:
-        label: "Upload pubkey from {{ item[0].item.name }}"
+        label: "Upload pubkey for {{ item[0].item.name }} in region {{ item[1] }}"
       when: "bastion_account.account_id != item[0].item.account_id and ( subaccount_limit == 'all' or item[0].item.name.startswith(subaccount_limit) ) and item[0].item.pubkey is defined"
       register: async_uploadaccountpubkey
       async: 7200
