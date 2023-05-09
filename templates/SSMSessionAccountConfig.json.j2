@@ -34,7 +34,9 @@
       ],
       "Resource": [
         "arn:aws:ec2:{{ item.item.default_region | default('eu-central-1') }}:{{ item.item.account_id }}:instance/*",
-        "arn:aws:ssm:{{ item.item.default_region | default('eu-central-1') }}::document/AWS-StartSSHSession"
+        "arn:aws:ec2:{{ item.item.default_region | default('eu-central-1') }}:{{ item.item.account_id }}:managed-instance/*",
+        "arn:aws:ssm:{{ item.item.default_region | default('eu-central-1') }}::document/AWS-StartSSHSession",
+        "arn:aws:ssm:{{ item.item.default_region | default('eu-central-1') }}::document/AWS-StartPortForwardingSession"
       ],
       "Effect": "Allow"
     },
