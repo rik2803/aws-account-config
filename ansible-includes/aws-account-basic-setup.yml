@@ -444,6 +444,7 @@
       sts_assume_role:
         role_arn: "arn:aws:iam::{{ item.account_id }}:role/{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrgAccAccRole') }}"
+        duration_seconds: "{{ item.sts_session_duration | default('3600') }}"
       register: "assumed_role_subaccount_single"
       loop: "{{ subaccounts|flatten(levels=1) }}"
       loop_control:
@@ -695,6 +696,7 @@
       sts_assume_role:
         role_arn: "arn:aws:iam::{{ item[0].account_id }}:role/{{ item[0].sts_role | default('OrganizationAccountAccessRole') }}"
         role_session_name: "{{ item[0].name }}-{{ item[0].sts_role | default('OrgAccAccRole') }}"
+        duration_seconds: "{{ item.sts_session_duration | default('3600') }}"
       register: "assumed_role_subaccount"
       loop: "{{ subaccounts|product(aws_roles)|list|unique }}"
       loop_control:
