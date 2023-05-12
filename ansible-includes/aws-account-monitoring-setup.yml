@@ -33,6 +33,7 @@
         sts_assume_role:
           role_arn: "arn:aws:iam::{{ item.account_id }}:role/{{ item.sts_role | default('OrganizationAccountAccessRole') }}"
           role_session_name: "{{ item.name }}-{{ item.sts_role | default('OrgAccAccRole') }}"
+          duration_seconds: "{{ item.sts_session_duration | default('3600') }}"
         register: "monitoring_assumed_role_subaccount_single"
         when: "subaccount_limit == 'all' or item.name.startswith(subaccount_limit)"
         loop: "{{ subaccounts|flatten(levels=1) }}"
