@@ -218,7 +218,6 @@ Resources:
   {{ cfn_tooling_name_prefix }}S3PublicLambdaFunctionStore:
     Type: AWS::S3::Bucket
     Properties:
-      AccessControl: PublicRead
       BucketName: "{{ bucket_name }}-public"
       OwnershipControls:
         Rules:
