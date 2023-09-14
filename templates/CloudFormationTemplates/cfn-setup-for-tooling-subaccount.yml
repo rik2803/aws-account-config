@@ -220,6 +220,9 @@ Resources:
     Properties:
       AccessControl: PublicRead
       BucketName: "{{ bucket_name }}-public"
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: ObjectWriter
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
