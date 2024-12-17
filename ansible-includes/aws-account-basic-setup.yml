@@ -690,6 +690,33 @@
       when: "item.ansible_job_id is defined"
       tags: [ 'subaccounts', 'createroles', 'organization', 'SSMSessionAccountConfig' ]
 
+    - name: Create the S3ObjectPermissions policy with region restrictions
+      iam_managed_policy:
+        aws_access_key: "{{ item.sts_creds.access_key }}"
+        aws_secret_key: "{{ item.sts_creds.secret_key }}"
+        security_token: "{{ item.sts_creds.session_token }}"
+        policy_name: "S3ObjectPermissions"
+        policy: "{{ lookup('template', 'S3ObjectPermissions.json.j2') }}"
+        state: present
+      loop: "{{ assumed_role_subaccount_single.results|flatten(levels=1) }}"
+      loop_control:
+        label: "Create S3ObjectPermissions policy on {{ item.item.name }}"
+      when: "bastion_account.account_id != item.item.account_id and ( subaccount_limit == 'all' or item.item.name.startswith(subaccount_limit) )"
+      register: async_S3ObjectPermissions
+      async: 7200
+      poll: 0
+      tags: [ 'subaccounts', 'createroles', 'organization' ]
+    - name: Wait for async_S3ObjectPermissions tasks to finish
+      async_status: jid={{ item.ansible_job_id }}
+      register: async_S3ObjectPermissions_jobs
+      until: async_S3ObjectPermissions_jobs.finished
+      retries: 300
+      loop: "{{ async_S3ObjectPermissions.results|default([])|flatten(levels=1) }}"
+      loop_control:
+        label: "Created S3ObjectPermissions policy on {{ item.item.item.name }}"
+      when: "item.ansible_job_id is defined"
+      tags: [ 'subaccounts', 'createroles', 'organization', 'S3ObjectPermissions' ]
+
     ### This assumes #aws_roles time a role per account, because these will be used in the
     ### loop to create all roles on all subaccounts.
     - name: Assume role for subaccounts
